@@ -324,6 +324,7 @@ npm run seed
 - Configure `SMTP_USER` and `SMTP_PASS` if you want real emails instead of mocked delivery logs.
 - Vercel Cron only triggers on production deployments.
 - Hobby plans cannot run the required `*/15` and hourly schedules for this app. The cron endpoints are deployed and ready, but you will need either a Vercel Pro upgrade or an external scheduler to call them on schedule.
+- This repo includes a GitHub Actions fallback scheduler in `.github/workflows/vercel-cron-fallback.yml`. Add the repository secret `CRON_SECRET` with the same value used in Vercel so GitHub Actions can call the protected cron endpoints.
 
 ## Troubleshooting
 

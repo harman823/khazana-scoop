@@ -1,0 +1,78 @@
+name: Vercel Cron Fallback
+
+on:
+  schedule:
+    - cron: '15,30,45 * * * *'
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which production job to run
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - cleanup
+          - reminders
+
+permissions: {}
+
+env:
+  SITE_URL: https://kosmicalign.vercel.app
+
+jobs:
+  cleanup:
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.target == 'both' || inputs.target == 'cleanup') ||
+      github.event.schedule == '15,30,45 * * * *' ||
+      github.event.schedule == '0 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate scheduler secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Missing repository secret CRON_SECRET."
+            exit 1
+          fi
+
+      - name: Run cleanup job
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 3 \
+            --retry-delay 5 \
+            --max-time 30 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/cleanup"
+
+  reminders:
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.target == 'both' || inputs.target == 'reminders') ||
+      github.event.schedule == '0 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate scheduler secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Missing repository secret CRON_SECRET."
+            exit 1
+          fi
+
+      - name: Run reminder job
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 3 \
+            --retry-delay 5 \
+            --max-time 30 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/reminders"
