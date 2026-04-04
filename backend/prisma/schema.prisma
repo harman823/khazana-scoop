@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  RESCHEDULED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum SessionMode {
+  ONLINE
+  OFFLINE
+}
+
+enum ReminderType {
+  CONFIRMATION
+  REMINDER_24HR
+  REMINDER_1HR
+  CANCELLATION
+  RESCHEDULE
+  WEBINAR
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+}
+
+// MODELS
+
+model Service {
+  id               String      @id @default(cuid())
+  slug             String      @unique
+  title            String
+  description      String
+  durationMin      Int
+  price            Float
+  sessionMode      SessionMode
+  idealOutcomes    String[]    @default([])
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  bookings         Booking[]
+}
+
+model Booking {
+  id               String        @id @default(cuid())
+  serviceId        String
+  bookingDateTime  DateTime      // In UTC
+  clientName       String
+  clientEmail      String
+  clientPhone      String
+  clientTimezone   String
+  status           BookingStatus @default(PENDING)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  service          Service       @relation(fields: [serviceId], references: [id])
+  payment          Payment?
+  intakeForm       IntakeForm?
+  calendarEvent    CalendarEventMap?
+  reminderLogs     ReminderLog[]
+
+  @@index([bookingDateTime])
+  @@index([clientEmail])
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  bookingId        String        @unique
+  orderId          String        @unique // Razorpay Order ID
+  transactionId    String?       // Razorpay Payment ID after success
+  amount           Float
+  currency         String        @default("INR")
+  status           PaymentStatus @default(PENDING)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  booking          Booking       @relation(fields: [bookingId], references: [id])
+
+  @@index([orderId])
+}
+
+model IntakeForm {
+  id               String    @id @default(cuid())
+  bookingId        String    @unique
+  dob              DateTime?
+  birthTime        String?
+  birthPlace       String?
+  keyConcern       String?
+  customQuestions  String?
+  createdAt        DateTime  @default(now())
+
+  booking          Booking   @relation(fields: [bookingId], references: [id])
+}
+
+model CalendarEventMap {
+  id               String    @id @default(cuid())
+  bookingId        String    @unique
+  externalEventId  String    // Google Calendar Event ID
+  meetLink         String?
+  createdAt        DateTime  @default(now())
+
+  booking          Booking   @relation(fields: [bookingId], references: [id])
+}
+
+model ReminderLog {
+  id               String       @id @default(cuid())
+  bookingId        String       
+  type             ReminderType
+  sentAt           DateTime     @default(now())
+  success          Boolean      @default(true)
+  errorStr         String?
+  
+  booking          Booking      @relation(fields: [bookingId], references: [id])
+}
+
+model Lead {
+  id               String     @id @default(cuid())
+  name             String
+  email            String?
+  phone            String
+  source           String?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  status           LeadStatus @default(NEW)
+  newsletterOptIn  Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+}
+
+model Webinar {
+  id               String     @id @default(cuid())
+  title            String
+  description      String
+  scheduledAt      DateTime
+  replayLink       String?
+  createdAt        DateTime   @default(now())
+}
+
+model WebhookEvent {
+  id               String   @id @default(cuid())
+  eventId          String   @unique // Provider webhook ID to prevent duplicates
+  provider         String   @default("RAZORPAY")
+  payload          Json
+  processed        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([eventId])
+}

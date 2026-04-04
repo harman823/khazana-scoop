@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #ff5c00;
+  --color-primary-dark: #a73a00;
+  --color-secondary: #6d4ca8;
+  
+  --color-surface: #fff8f4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3eae3;
+  --color-surface-container: #e6dcd5;
+  --color-surface-container-high: #d9cec6;
+  --color-surface-container-highest: #ccbfae;
+  
+  --color-on-surface: #12100f;
+  --color-on-surface-variant: #45413f;
+  --color-on-primary: #ffffff;
+  --color-error: #ff3b3b;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Work Sans", sans-serif;
+  --font-mono: "Courier New", monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-on-surface font-bold;
+  }
+}
+
+@layer utilities {
+  .shadow-ambient {
+    box-shadow: 0 20px 80px rgba(18, 16, 15, 0.08);
+  }
+  
+  .glass-panel {
+    @apply bg-surface/80 backdrop-blur-xl;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-primary-dark text-on-primary font-display font-bold uppercase tracking-wider px-8 py-4 rounded-none transition-colors duration-200 hover:from-primary-dark hover:to-primary-dark;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-on-surface font-display font-bold uppercase tracking-wider px-8 py-4 rounded-none ring-1 ring-on-surface/15 transition-colors duration-200 hover:bg-surface-container-low;
+  }
+  
+  .input-field {
+    @apply bg-surface-container-lowest text-on-surface font-body px-4 py-3 rounded-none focus:outline-none focus:ring-0 border-b-2 border-transparent focus:border-on-surface transition-colors;
+  }
+}

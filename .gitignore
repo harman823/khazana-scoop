@@ -1,0 +1,56 @@
+# Dependency folders
+node_modules/
+
+# Environment variables (CREDENTIALS)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Google API Credentials (CREDENTIALS)
+client_secret_*.json
+client-secret.json
+credentials.json
+
+# Build results
+dist/
+build/
+.next/
+out/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Antigravity/Gemini private history
+.gemini/
+antigravity/
+.antigravityignore
+.brain/
+logs/
+overview.txt
+
+# Prisma
+/backend/prisma/*.db
+/backend/prisma/*.db-journal
+
+# Other
+temp/
+tmp/

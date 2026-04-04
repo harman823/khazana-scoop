@@ -1,0 +1,51 @@
+import { z } from 'zod';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+const envSchema = z.object({
+  PORT: z.string().default('3000'),
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  DIRECT_URL: z.string().optional(),
+  
+  // External APIs
+  RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
+  RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
+  
+  // Google Calendar Integration
+  GOOGLE_API_KEY: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().optional(),
+  GOOGLE_REDIRECT_END_POINT: z.string().optional().default('/oauth/callback'),
+  GOOGLE_CALENDAR_ID: z.string().optional().default('primary'),
+  GOOGLE_TOKEN_ACCESS_TYPE: z.string().optional().default('offline'),
+  GOOGLE_CALENDAR_SCOPE: z.string().optional().default('https://www.googleapis.com/auth/calendar'),
+  GOOGLE_ACCESS_TOKEN: z.string().optional(),
+  GOOGLE_REFRESH_TOKEN: z.string().optional(),
+  GOOGLE_TOKEN_EXPIRY_DATE: z.coerce.number().optional(),
+
+  // Appointment Scheduling
+  START_TIME: z.string().optional().default('10:00'),
+  END_TIME: z.string().optional().default('18:00'),
+  APPOINTMENT_DURATION: z.coerce.number().optional().default(60),
+  APPOINTMENT_INTERVAL: z.coerce.number().optional().default(30),
+  START_OF_DAY: z.string().optional().default('00:00'),
+  END_OF_DAY: z.string().optional().default('23:59'),
+  TIME_FORMAT: z.string().optional().default('HH:mm'),
+  
+  // Communication (SMTP)
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+});
+
+const _env = envSchema.safeParse(process.env);
+
+if (!_env.success) {
+  console.error('❌ Invalid environment variables:', _env.error.format());
+  process.exit(1);
+}
+
+export const env = _env.data;
