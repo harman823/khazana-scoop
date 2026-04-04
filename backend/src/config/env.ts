@@ -1,14 +1,13 @@
 import { z } from 'zod';
-import dotenv from 'dotenv';
-import path from 'path';
+import { loadEnvironment } from './load-env';
 
-// Load environment variables from .env file
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+loadEnvironment();
 
 const envSchema = z.object({
   PORT: z.string().default('3000'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   DIRECT_URL: z.string().optional(),
+  FRONTEND_URL: z.string().optional(),
   
   // External APIs
   RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
@@ -39,6 +38,10 @@ const envSchema = z.object({
   // Communication (SMTP)
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+
+  // Admin and automation
+  ADMIN_KEY: z.string().optional().default('kosmicalign_admin_mock'),
+  CRON_SECRET: z.string().optional(),
 });
 
 const _env = envSchema.safeParse(process.env);

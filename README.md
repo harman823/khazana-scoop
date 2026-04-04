@@ -4,6 +4,7 @@ Full-stack booking app for Kosmic Align.
 
 - `backend/` is the Express + Prisma + PostgreSQL API.
 - `frontend/` is the Vite + React client.
+- `api/` contains the Vercel serverless entrypoints that expose the Express app and scheduled jobs in production.
 - The frontend talks to the backend through Vite's `/api` proxy during local development.
 
 ## Project Structure
@@ -44,7 +45,12 @@ Notes:
 
 ## Backend Environment Variables
 
-Create `backend/.env` and add the values your environment needs.
+For local development, copy `.env.example` to either:
+
+- `backend/.env`
+- `.env.local`
+
+The backend loader supports both locations. On Vercel, set the same keys in Project Settings -> Environment Variables.
 
 ### Required
 
@@ -59,6 +65,7 @@ RAZORPAY_KEY_SECRET=placeholder_secret
 
 ```env
 DIRECT_URL=
+FRONTEND_URL=
 
 GOOGLE_API_KEY=
 GOOGLE_CLIENT_ID=
@@ -81,6 +88,7 @@ SMTP_USER=
 SMTP_PASS=
 
 ADMIN_KEY=kosmicalign_admin_mock
+CRON_SECRET=replace-with-a-long-random-secret
 ```
 
 Behavior without optional credentials:
@@ -100,13 +108,13 @@ npm install
 
 ### 2. Configure the backend environment
 
-Create `backend/.env` using the variables above.
+Copy `.env.example` to `backend/.env` and fill in the values you need.
 
 ### 3. Generate Prisma client
 
 ```powershell
 cd backend
-npx prisma generate
+npm run prisma:generate
 ```
 
 ### 4. Push the schema to PostgreSQL
@@ -115,7 +123,7 @@ This repo currently has no committed Prisma migrations, so local setup should us
 
 ```powershell
 cd backend
-npx prisma db push
+npm run prisma:push
 ```
 
 ### 5. Seed the database
@@ -124,7 +132,7 @@ This creates the initial services used by the booking flow.
 
 ```powershell
 cd backend
-npx prisma db seed
+npm run seed
 ```
 
 ### 6. Install frontend dependencies
@@ -186,21 +194,21 @@ Generate Prisma client:
 
 ```powershell
 cd backend
-npx prisma generate
+npm run prisma:generate
 ```
 
 Push Prisma schema to the database:
 
 ```powershell
 cd backend
-npx prisma db push
+npm run prisma:push
 ```
 
 Seed the database:
 
 ```powershell
 cd backend
-npx prisma db seed
+npm run seed
 ```
 
 Open Prisma Studio:
@@ -214,7 +222,7 @@ Type-check the backend:
 
 ```powershell
 cd backend
-.\node_modules\.bin\tsc.cmd --noEmit
+npm run typecheck
 ```
 
 Run the backend container with Docker:
@@ -261,15 +269,61 @@ cd frontend
 - Filled slots are blocked immediately after booking initiation.
 - Fully busy days show as unavailable.
 - Reminder emails are sent to the email captured in the intake form after a booking is confirmed.
-- Session reminders run automatically from the backend cron job.
+- Session reminders run from local `node-cron` during development and from Vercel Cron endpoints in production.
 
-## Production Notes
+## Vercel Deployment
 
-For production-ready payments and notifications:
+This repo is configured for a single Vercel project:
 
-- replace placeholder Razorpay keys with real test or live keys
-- configure Google Calendar OAuth credentials
-- configure `SMTP_USER` and `SMTP_PASS`
+- `frontend/dist` is deployed as the static site
+- `api/handler.ts` serves the Express API on `/api/*`
+- `api/cron/cleanup.ts` and `api/cron/reminders.ts` replace long-running in-process cron jobs
+- `.vercelignore` keeps the legacy sandbox folder, docs, and local Google credential JSON out of the deployment bundle
+
+### Required Vercel environment variables
+
+- `DATABASE_URL`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `ADMIN_KEY`
+- `CRON_SECRET`
+
+### Recommended Vercel environment variables
+
+- `FRONTEND_URL`
+- `DIRECT_URL`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `GOOGLE_ACCESS_TOKEN`
+- `GOOGLE_REFRESH_TOKEN`
+- `GOOGLE_TOKEN_EXPIRY_DATE`
+- `SMTP_USER`
+- `SMTP_PASS`
+
+### Deploy steps
+
+1. Create a Vercel project from the repo root.
+2. Add the environment variables from `.env.example` in Vercel Project Settings.
+3. Set `FRONTEND_URL` to your production domain, for example `https://kosmicalign.vercel.app`.
+4. Set `CRON_SECRET` to a long random value and keep it secret.
+5. Deploy with `vercel --prod` or by connecting the repo to Vercel Git deployment.
+6. After the first deploy, run Prisma against the production database from `backend/`:
+
+```powershell
+cd backend
+npm run prisma:generate
+npm run prisma:push
+npm run seed
+```
+
+### Production notes
+
+- Replace placeholder Razorpay keys with real test or live keys.
+- Configure Google Calendar OAuth credentials if you want live calendar blocking and Google Meet links.
+- Configure `SMTP_USER` and `SMTP_PASS` if you want real emails instead of mocked delivery logs.
+- Vercel Cron only triggers on production deployments.
+- Hobby plans cannot run the required `*/15` and hourly schedules for this app. The cron endpoints are deployed and ready, but you will need either a Vercel Pro upgrade or an external scheduler to call them on schedule.
 
 ## Troubleshooting
 
@@ -291,4 +345,13 @@ Check `SMTP_USER` and `SMTP_PASS`. Without them, email sending is mocked in the 
 
 ### Payment stays in mock mode
 
-Replace placeholder Razorpay credentials in `backend/.env` with real Razorpay keys, then restart the backend.
+Replace placeholder Razorpay credentials in your local env file or Vercel environment variables with real Razorpay keys, then redeploy or restart the backend.
+
+### API routes work locally but fail on Vercel
+
+Make sure:
+
+- the repo was deployed from the project root
+- Vercel picked up the committed `vercel.json`
+- `DATABASE_URL` and `CRON_SECRET` are set in Vercel Project Settings
+- the production database has been prepared with `npm run prisma:push` and `npm run seed` from `backend/`

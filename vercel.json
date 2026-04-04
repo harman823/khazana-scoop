@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci --prefix backend && npm ci --prefix frontend",
+  "buildCommand": "npm --prefix backend run prisma:generate && npm --prefix backend run typecheck && npm --prefix frontend run build",
+  "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 60
+    },
+    "api/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api",
+      "destination": "/api/handler"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/handler?path=health"
+    },
+    {
+      "source": "/api/favicon.ico",
+      "destination": "/api/handler?path=favicon.ico"
+    },
+    {
+      "source": "/api/v1/:match*",
+      "destination": "/api/handler?path=v1/:match*"
+    },
+    {
+      "source": "/((?!api(?:/|$)).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
