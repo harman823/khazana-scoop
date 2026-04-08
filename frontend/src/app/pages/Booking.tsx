@@ -1,913 +1,388 @@
-import { useCallback, useEffect, useState } from 'react';
-import { format, isSaturday, isSunday, startOfToday } from 'date-fns';
-import { AnimatePresence, motion } from 'motion/react';
-import { DayPicker } from 'react-day-picker';
-import { useSearchParams } from 'react-router';
-import 'react-day-picker/dist/style.css';
-import { Button } from '../components/Button';
-import { Input, Textarea } from '../components/Input';
-import { ManifestItem } from '../components/ManifestItem';
-import {
-  fetchDaySlots,
-  fetchMonthlyAvailability,
-  fetchServices,
-  initiateBooking,
-  verifyPayment,
-} from '../../lib/api';
-import { useUI } from '../components/UIContext';
-
-type ServiceOption = {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  durationMin: number;
-  price: number;
-};
-
-type TimeSlot = {
-  start: string;
-  end: string;
-  label: string;
-  booked: boolean;
-};
-
-type IntakeFormState = {
-  clientName: string;
-  clientEmail: string;
-  clientPhone: string;
-  clientTimezone: string;
-  dob: string;
-  birthTime: string;
-  birthPlace: string;
-  keyConcern: string;
-  customQuestions: string;
-};
-
-type PaymentConfirmation = {
-  meetLink?: string | null;
-  confirmationEmailSent?: boolean;
-};
-
-type PendingPayment = {
-  orderId: string;
-  amount: number;
-  currency: string;
-  paymentMode: 'mock' | 'razorpay';
-  razorpayKeyId?: string;
-};
-
-type RazorpaySuccessPayload = {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-};
-
-type RazorpayOptions = {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  order_id: string;
-  handler: (response: RazorpaySuccessPayload) => void;
-  modal?: { ondismiss?: () => void };
-  prefill?: {
-    name?: string;
-    email?: string;
-    contact?: string;
-  };
-  theme?: {
-    color?: string;
-  };
-};
-
-declare global {
-  interface Window {
-    Razorpay?: new (options: RazorpayOptions) => {
-      open: () => void;
-      on: (event: string, handler: (response: any) => void) => void;
-    };
-  }
-}
-
-const stepVariants = {
-  hidden: { opacity: 0, x: 20 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: [0.76, 0, 0.24, 1] as any } },
-  exit: { opacity: 0, x: -20, transition: { duration: 0.3 } }
-};
-
-const initialFormState: IntakeFormState = {
-  clientName: '',
-  clientEmail: '',
-  clientPhone: '',
-  clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
-  dob: '',
-  birthTime: '',
-  birthPlace: '',
-  keyConcern: '',
-  customQuestions: '',
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
-const getDayKey = (day: Date) => format(day, 'yyyy-MM-dd');
-
-const loadRazorpayScript = async () => {
-  if (window.Razorpay) {
-    return true;
-  }
-
-  return new Promise<boolean>((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { CheckCircle, Calendar, CreditCard, ChevronRight, User, CalendarDays, MapPin } from "lucide-react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
+import { fetchServices, fetchDaySlots, initiateBooking, fetchMonthlyAvailability, verifyPayment } from "../../lib/api";
 
 export function Booking() {
-  const { isLoaded } = useUI();
-  const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
-  const [services, setServices] = useState<ServiceOption[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(true);
-  const [servicesError, setServicesError] = useState<string | null>(null);
-  const [selectedService, setSelectedService] = useState('');
+  const [selectedService, setSelectedService] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedTime, setSelectedTime] = useState("");
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", location: "online" });
+  
+  const [services, setServices] = useState<any[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  
+  const [timeSlots, setTimeSlots] = useState<any[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
 
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  const [displayMonth, setDisplayMonth] = useState(new Date());
-  const [daysWithSlots, setDaysWithSlots] = useState<string[]>([]);
-  const [calendarLoading, setCalendarLoading] = useState(false);
-  const [calendarLoaded, setCalendarLoaded] = useState(false);
-  const [calendarError, setCalendarError] = useState<string | null>(null);
-
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [slotsLoading, setSlotsLoading] = useState(false);
-  const [slotsError, setSlotsError] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState<IntakeFormState>(initialFormState);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentConfirmation, setPaymentConfirmation] = useState<PaymentConfirmation | null>(null);
-  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
-
-  const selectedServiceRecord = services.find((service) => service.id === selectedService) || null;
-  const requestedService = searchParams.get('service');
-  const intakeFormIsValid =
-    formData.clientName.trim().length >= 2 &&
-    /\S+@\S+\.\S+/.test(formData.clientEmail) &&
-    formData.clientPhone.replace(/\D/g, '').length >= 10 &&
-    !!formData.dob &&
-    !!formData.birthTime &&
-    formData.birthPlace.trim().length >= 2 &&
-    formData.keyConcern.trim().length >= 2;
-
-  const loadMonthAvailability = useCallback(async (month: Date) => {
-    if (!selectedService) {
-      setDaysWithSlots([]);
-      setCalendarLoaded(false);
-      return;
-    }
-
-    setCalendarLoading(true);
-    setCalendarError(null);
-
-    try {
-      const res = await fetchMonthlyAvailability(month.getFullYear(), month.getMonth() + 1, selectedService);
-      const availableDays = (res.data.days || [])
-        .filter((day: { day: number; hasSlots: boolean }) => day.hasSlots)
-        .map((day: { day: number }) =>
-          format(new Date(month.getFullYear(), month.getMonth(), day.day), 'yyyy-MM-dd')
-        );
-
-      setDaysWithSlots(availableDays);
-      setCalendarLoaded(true);
-    } catch (error) {
-      setCalendarLoaded(false);
-      setDaysWithSlots([]);
-      setCalendarError(error instanceof Error ? error.message : 'Failed to fetch live availability.');
-    } finally {
-      setCalendarLoading(false);
-    }
-  }, [selectedService]);
-
-  const loadSlots = useCallback(async (day: Date) => {
-    if (!selectedService) {
-      setSlots([]);
-      return;
-    }
-
-    setSlotsLoading(true);
-    setSlotsError(null);
-    setSlots([]);
-
-    try {
-      const res = await fetchDaySlots(format(day, 'yyyy-MM-dd'), selectedService);
-      setSlots(res.data.slots || []);
-    } catch (error) {
-      setSlotsError(error instanceof Error ? error.message : 'Failed to fetch live slots.');
-      setSlots([]);
-    } finally {
-      setSlotsLoading(false);
-    }
-  }, [selectedService]);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [unavailableDays, setUnavailableDays] = useState<Date[]>([]);
 
   useEffect(() => {
-    let ignore = false;
-
-    const loadServices = async () => {
-      setServicesLoading(true);
-      setServicesError(null);
-
-      try {
-        const response = await fetchServices();
-        const liveServices = (response.data || []) as ServiceOption[];
-
-        if (!ignore) {
-          setServices(liveServices);
-          setSelectedService((current) => {
-            if (current) {
-              return current;
-            }
-
-            const requested = liveServices.find((service) =>
-              service.slug === requestedService || service.id === requestedService
-            );
-
-            return requested?.id || liveServices[0]?.id || '';
-          });
-        }
-      } catch (error) {
-        if (!ignore) {
-          setServices([]);
-          setServicesError(error instanceof Error ? error.message : 'Failed to load services.');
-        }
-      } finally {
-        if (!ignore) {
-          setServicesLoading(false);
-        }
+    if (!selectedService) return;
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth() + 1;
+    fetchMonthlyAvailability(year, month, selectedService).then(res => {
+      if (res.success && res.data?.days) {
+        const disabled = res.data.days
+          .filter((d: any) => !d.hasSlots)
+          .map((d: any) => new Date(year, month - 1, d.day));
+        setUnavailableDays(disabled);
       }
-    };
-
-    loadServices();
-
-    return () => {
-      ignore = true;
-    };
-  }, [requestedService]);
+    }).catch(err => console.error(err));
+  }, [currentMonth, selectedService]);
 
   useEffect(() => {
-    if (!selectedService) {
-      return;
-    }
-
-    loadMonthAvailability(displayMonth);
-  }, [displayMonth, loadMonthAvailability, selectedService]);
-
-  useEffect(() => {
-    setSelectedSlot(null);
-
-    if (!date || !selectedService) {
-      setSlots([]);
-      setSlotsError(null);
-      return;
-    }
-
-    loadSlots(date);
-  }, [date, loadSlots, selectedService]);
+    fetchServices().then(res => {
+      setServices(res.data || res);
+      const params = new URLSearchParams(window.location.search);
+      const sId = params.get('service');
+      if (sId) setSelectedService(sId);
+    }).finally(() => setLoadingServices(false));
+  }, []);
 
   useEffect(() => {
-    setPendingPayment(null);
-    setPaymentConfirmation(null);
-  }, [
-    selectedService,
-    date?.getTime(),
-    selectedSlot?.start,
-    formData.clientName,
-    formData.clientEmail,
-    formData.clientPhone,
-    formData.clientTimezone,
-    formData.dob,
-    formData.birthTime,
-    formData.birthPlace,
-    formData.keyConcern,
-    formData.customQuestions,
-  ]);
-
-  const handleDateSelect = (selectedDay: Date | undefined) => {
-    setDate(selectedDay);
-    setSelectedSlot(null);
-    setSubmitError(null);
-  };
-
-  const handleInputChange = (field: keyof IntakeFormState, value: string) => {
-    setFormData((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
-
-  const openRazorpayCheckout = async (payment: PendingPayment) => {
-    const isLoaded = await loadRazorpayScript();
-
-    if (!isLoaded || !window.Razorpay || !payment.razorpayKeyId) {
-      throw new Error('Unable to load Razorpay checkout.');
+    if (selectedDate && selectedService) {
+      setLoadingSlots(true);
+      const dateStr = selectedDate.toLocaleDateString('en-CA');
+      fetchDaySlots(dateStr, selectedService).then(res => {
+        if (res.success && res.data?.slots) {
+          setTimeSlots(res.data.slots);
+        } else {
+          setTimeSlots([]);
+        }
+      }).catch(err => {
+        console.error(err);
+        setTimeSlots([]);
+      }).finally(() => setLoadingSlots(false));
+    } else {
+      setTimeSlots([]);
     }
+  }, [selectedDate, selectedService]);
+  
+  const handleNext = () => setStep(step + 1);
+  const handlePrev = () => setStep(step - 1);
 
-    return new Promise<RazorpaySuccessPayload>((resolve, reject) => {
-      let settled = false;
+  const handleCheckout = async () => {
+    if (!selectedService || !selectedDate || !selectedTime || !formData.name || !formData.email || !formData.phone) return;
+    
+    setIsBooking(true);
+    try {
+      const payload = {
+        serviceId: selectedService,
+        bookingDateTime: selectedTime, 
+        clientName: formData.name,
+        clientEmail: formData.email,
+        clientPhone: formData.phone,
+        clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+      
+      const response = await initiateBooking(payload);
+      const pData = response.data || response;
 
-      const checkout = new window.Razorpay({
-        key: payment.razorpayKeyId,
-        amount: payment.amount,
-        currency: payment.currency,
-        name: 'Kosmic Align',
-        description: selectedServiceRecord?.title || 'Session Booking',
-        order_id: payment.orderId,
-        prefill: {
-          name: formData.clientName,
-          email: formData.clientEmail,
-          contact: formData.clientPhone,
-        },
-        theme: {
-          color: '#ff5a1f',
-        },
-        modal: {
-          ondismiss: () => {
-            if (!settled) {
-              settled = true;
-              reject(new Error('Payment checkout was closed before completion.'));
-            }
-          },
-        },
-        handler: (response) => {
-          if (!settled) {
-            settled = true;
-            resolve(response);
+      if (pData.paymentMode === 'mock') {
+         await verifyPayment({ orderId: pData.orderId });
+         handleNext();
+         return;
+      }
+
+      const options = {
+        key: pData.razorpayKeyId,
+        amount: pData.amount,
+        currency: pData.currency,
+        name: "Kosmic Align",
+        description: "Session Booking",
+        order_id: pData.orderId,
+        handler: async function (razorpayResponse: any) {
+          try {
+            await verifyPayment({
+              orderId: pData.orderId,
+              razorpayPaymentId: razorpayResponse.razorpay_payment_id,
+              razorpaySignature: razorpayResponse.razorpay_signature
+            });
+            handleNext();
+          } catch (err) {
+            console.error("Payment verification failed", err);
+            alert("Payment verification failed. Please contact support.");
           }
         },
-      });
-
-      checkout.on('payment.failed', (response: any) => {
-        if (!settled) {
-          settled = true;
-          reject(new Error(response?.error?.description || 'Payment failed.'));
+        prefill: {
+          name: formData.name,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        theme: {
+          color: "#E84C3D"
         }
-      });
-
-      checkout.open();
-    });
-  };
-
-  const handleConfirmPayment = async () => {
-    if (!selectedServiceRecord || !selectedSlot) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const payment = pendingPayment;
-
-      let verificationPayload: {
-        orderId: string;
-        razorpayPaymentId?: string;
-        razorpaySignature?: string;
       };
 
-      if (!pendingPayment) {
-        const bookingResponse = await initiateBooking({
-          serviceId: selectedServiceRecord.id,
-          bookingDateTime: selectedSlot.start,
-          clientName: formData.clientName.trim(),
-          clientEmail: formData.clientEmail.trim(),
-          clientPhone: formData.clientPhone.trim(),
-          clientTimezone: formData.clientTimezone,
-          dob: formData.dob || undefined,
-          birthTime: formData.birthTime || undefined,
-          birthPlace: formData.birthPlace.trim() || undefined,
-          keyConcern: formData.keyConcern.trim() || undefined,
-          customQuestions: formData.customQuestions.trim() || undefined,
-        });
-
-        const nextPayment = bookingResponse.data as PendingPayment;
-        setPendingPayment(nextPayment);
-
-        if (nextPayment.paymentMode === 'mock') {
-          return;
-        }
-
-        const checkoutResponse = await openRazorpayCheckout(nextPayment);
-        verificationPayload = {
-          orderId: checkoutResponse.razorpay_order_id,
-          razorpayPaymentId: checkoutResponse.razorpay_payment_id,
-          razorpaySignature: checkoutResponse.razorpay_signature,
-        };
-      } else if (payment.paymentMode === 'mock') {
-        verificationPayload = { orderId: payment.orderId };
-      } else {
-        const checkoutResponse = await openRazorpayCheckout(payment);
-        verificationPayload = {
-          orderId: checkoutResponse.razorpay_order_id,
-          razorpayPaymentId: checkoutResponse.razorpay_payment_id,
-          razorpaySignature: checkoutResponse.razorpay_signature,
-        };
-      }
-
-      const paymentResponse = await verifyPayment(verificationPayload);
-      setPaymentConfirmation(paymentResponse.data || null);
-      setPendingPayment(null);
-
-      await loadMonthAvailability(displayMonth);
-      if (date) {
-        await loadSlots(date);
-      }
-
-      setStep(5);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to complete your booking.';
-      setSubmitError(message);
-
-      if (message.toLowerCase().includes('slot') || message.toLowerCase().includes('calendar conflict')) {
-        setSelectedSlot(null);
-        setStep(2);
-        await loadMonthAvailability(displayMonth);
-        if (date) {
-          await loadSlots(date);
-        }
-      }
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (resp: any) {
+         alert("Payment failed: " + resp.error.description);
+      });
+      rzp.open();
+    } catch (err) {
+      console.error("Booking failed:", err);
+      alert("Failed to initiate booking. Check console.");
     } finally {
-      setIsSubmitting(false);
+      setIsBooking(false);
     }
   };
 
-  const isDayDisabled = (day: Date) => {
-    if (day < startOfToday()) return true;
-    if (isSaturday(day) || isSunday(day)) return true;
-
-    if (calendarLoaded && format(day, 'yyyy-MM') === format(displayMonth, 'yyyy-MM')) {
-      return !daysWithSlots.includes(getDayKey(day));
+  const renderStepContent = () => {
+    switch (step) {
+      case 1:
+        return (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <h3 className="text-3xl font-serif font-semibold text-[#585858] mb-8 text-center">Select a Service</h3>
+            {loadingServices ? (
+              <div className="text-center text-[#7A7A7A] py-8">Loading services...</div>
+            ) : (
+            <div className="space-y-4">
+              {services.map((service) => (
+                <div
+                  key={service.id}
+                  onClick={() => setSelectedService(service.id)}
+                  className={`p-6 rounded-[2rem] border-2 cursor-pointer transition-all flex justify-between items-center ${
+                    selectedService === service.id
+                      ? "border-[#E84C3D] bg-[#FDEBD0]"
+                      : "border-transparent bg-[#FFF5EA] hover:bg-[#FDF3E6]"
+                  }`}
+                >
+                  <div>
+                    <h4 className="text-xl font-serif font-semibold text-[#585858] mb-1">{service.title}</h4>
+                    <p className="text-sm text-[#7A7A7A] flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4" /> {service.durationMin} mins
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-semibold text-[#585858] bg-white px-4 py-2 rounded-full text-sm shadow-sm">
+                      ₹{service.price}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            )}
+            <button
+              onClick={handleNext}
+              disabled={!selectedService}
+              className="mt-12 w-full py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold disabled:opacity-50 hover:bg-[#C0392B] transition-all flex items-center justify-center gap-2"
+            >
+              Continue <ChevronRight className="w-5 h-5" />
+            </button>
+          </motion.div>
+        );
+      case 2:
+        return (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <h3 className="text-3xl font-serif font-semibold text-[#585858] mb-8 text-center">Choose Date & Time</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 bg-[#FFF5EA] p-8 rounded-[3rem]">
+              <div className="flex justify-center">
+                <DayPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  onMonthChange={setCurrentMonth}
+                  disabled={[{ before: new Date(new Date().setHours(0,0,0,0)) }, ...unavailableDays]}
+                  className="bg-white p-4 rounded-3xl shadow-sm"
+                  classNames={{
+                    day_selected: "bg-[#E84C3D] text-white rounded-full",
+                    day_today: "font-bold text-[#E84C3D]",
+                  }}
+                />
+              </div>
+              <div>
+                <h4 className="text-lg font-serif font-semibold text-[#585858] mb-4">Available Times</h4>
+                {selectedDate && loadingSlots ? (
+                  <div className="text-[#7A7A7A] text-sm">Loading slots...</div>
+                ) : selectedDate ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {timeSlots.length > 0 ? timeSlots.map((slot: any, idx: number) => {
+                      const timeStr = slot.start || slot;
+                      const isBooked = slot.booked;
+                      return (
+                      <button
+                        key={idx}
+                        disabled={isBooked}
+                        onClick={() => setSelectedTime(timeStr)}
+                        className={`py-3 rounded-xl border transition-all text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed ${
+                          selectedTime === timeStr
+                            ? "bg-[#E84C3D] text-white border-[#E84C3D]"
+                            : "bg-white text-[#7A7A7A] border-transparent hover:border-[#E84C3D]/30"
+                        }`}
+                      >
+                        {timeStr.includes('T') ? new Date(timeStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) : timeStr}
+                      </button>
+                    )}) : <div className="text-[#7A7A7A] text-sm col-span-2">No slots available.</div>}
+                  </div>
+                ) : (
+                  <p className="text-[#7A7A7A] text-sm">Please select a date first.</p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-4 mt-12">
+              <button
+                onClick={handlePrev}
+                className="w-1/3 py-4 bg-white border border-[#E5BE90]/50 text-[#7A7A7A] rounded-full text-lg font-medium hover:bg-[#FFF5EA] transition-all"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={!selectedDate || !selectedTime}
+                className="w-2/3 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold disabled:opacity-50 hover:bg-[#C0392B] transition-all flex items-center justify-center gap-2"
+              >
+                Continue <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        );
+      case 3:
+        return (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <h3 className="text-3xl font-serif font-semibold text-[#585858] mb-8 text-center">Your Details</h3>
+            <div className="space-y-6 max-w-lg mx-auto">
+              <div>
+                <label className="block text-sm font-medium text-[#585858] mb-2">Full Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-[#FFF5EA] border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#E84C3D]/30 transition-all text-[#585858]"
+                  placeholder="Jane Doe"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#585858] mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full bg-[#FFF5EA] border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#E84C3D]/30 transition-all text-[#585858]"
+                    placeholder="jane@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#585858] mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full bg-[#FFF5EA] border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#E84C3D]/30 transition-all text-[#585858]"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#585858] mb-2">Session Type</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setFormData({ ...formData, location: "online" })}
+                    className={`py-4 rounded-2xl flex items-center justify-center gap-2 transition-all ${
+                      formData.location === "online" ? "bg-[#E84C3D] text-white" : "bg-[#FFF5EA] text-[#7A7A7A]"
+                    }`}
+                  >
+                    Online (Zoom)
+                  </button>
+                  <button
+                    onClick={() => setFormData({ ...formData, location: "inperson" })}
+                    className={`py-4 rounded-2xl flex items-center justify-center gap-2 transition-all ${
+                      formData.location === "inperson" ? "bg-[#E84C3D] text-white" : "bg-[#FFF5EA] text-[#7A7A7A]"
+                    }`}
+                  >
+                    <MapPin className="w-4 h-4" /> Delhi Clinic
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-4 mt-12 max-w-lg mx-auto">
+              <button
+                onClick={handlePrev}
+                className="w-1/3 py-4 bg-white border border-[#E5BE90]/50 text-[#7A7A7A] rounded-full text-lg font-medium hover:bg-[#FFF5EA] transition-all"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleCheckout}
+                disabled={!formData.name || !formData.email || isBooking}
+                className="w-2/3 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+              >
+                {isBooking ? "Processing..." : "Proceed to Pay"} <CreditCard className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        );
+      case 4:
+        return (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-12">
+            <div className="w-24 h-24 bg-[#FDEBD0] rounded-full flex items-center justify-center mx-auto mb-8 relative">
+              <CheckCircle className="w-12 h-12 text-[#E84C3D] absolute z-10" />
+              <div className="absolute inset-0 bg-[#FDEBD0] animate-ping rounded-full opacity-50" />
+            </div>
+            <h3 className="text-4xl font-serif font-semibold text-[#585858] mb-4">Payment Initiated / Mocked</h3>
+            <p className="text-[#7A7A7A] text-lg max-w-md mx-auto mb-8">
+              Your session booking was successfully pushed to the backend. Please check the dashboard or email.
+            </p>
+            <div className="bg-[#FFF5EA] p-8 rounded-[2rem] max-w-md mx-auto text-left mb-12">
+              <h4 className="font-serif font-semibold text-[#585858] text-xl mb-4 border-b border-[#E5BE90]/30 pb-4">Booking Details</h4>
+              <div className="space-y-3 text-sm text-[#7A7A7A]">
+                <div className="flex justify-between"><span className="font-medium">Service:</span> <span>{services.find(s => s.id === selectedService)?.title}</span></div>
+                <div className="flex justify-between"><span className="font-medium">Date:</span> <span>{selectedDate?.toLocaleDateString()}</span></div>
+                <div className="flex justify-between"><span className="font-medium">Time:</span> <span>{selectedTime}</span></div>
+                <div className="flex justify-between"><span className="font-medium">Mode:</span> <span className="capitalize">{formData.location}</span></div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      default:
+        return null;
     }
-
-    return false;
   };
 
   return (
-    <div className="flex flex-col flex-grow bg-surface">
-      <section className="px-6 lg:px-24 py-32 bg-surface-container-lowest text-on-surface">
-        <motion.h1
-          className="font-display text-6xl md:text-8xl font-bold uppercase tracking-tighter mb-16 leading-none"
-          initial={{ opacity: 0, y: 40 }}
-          animate={isLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-          transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] as any }}
-        >
-          Secure A Time
-        </motion.h1>
+    <div className="max-w-4xl mx-auto pt-20 pb-32">
+      <div className="text-center mb-16">
+        <h1 className="text-5xl font-serif font-semibold text-[#585858] mb-4">Book Your Session</h1>
+        <p className="text-lg text-[#7A7A7A]">Secure your spot for clarity and healing.</p>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-start">
-          <motion.div
-            className="lg:col-span-4 sticky top-32"
-            initial={{ opacity: 0, x: -40 }}
-            animate={isLoaded ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 }}
-            transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] as any }}
-          >
-            <h2 className="font-display text-3xl font-bold uppercase tracking-tighter mb-8">Process</h2>
-            <ul className="space-y-4 font-mono text-sm tracking-widest uppercase">
-              <li className={`flex items-center gap-4 ${step >= 1 ? 'text-primary' : 'text-on-surface-variant'}`}>
-                <span className="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs">1</span>
-                Select Service
-              </li>
-              <li className={`flex items-center gap-4 ${step >= 2 ? 'text-primary' : 'text-on-surface-variant'}`}>
-                <span className="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs">2</span>
-                Date & Time
-              </li>
-              <li className={`flex items-center gap-4 ${step >= 3 ? 'text-primary' : 'text-on-surface-variant'}`}>
-                <span className="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs">3</span>
-                Intake Form
-              </li>
-              <li className={`flex items-center gap-4 ${step >= 4 ? 'text-primary' : 'text-on-surface-variant'}`}>
-                <span className="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs">4</span>
-                Payment
-              </li>
-            </ul>
-
-            <div className="mt-16 bg-surface-container p-8">
-              <h3 className="font-display font-bold uppercase tracking-tighter mb-4 text-on-surface text-xl">Email Triggers</h3>
-              <ul className="font-mono text-xs text-on-surface-variant uppercase tracking-widest space-y-2">
-                <li>- Booking Confirmed</li>
-                <li>- 24hr Reminder</li>
-                <li>- 1hr Reminder</li>
-                <li>- Cancellation Notice</li>
-              </ul>
+      <div className="bg-white p-8 md:p-16 rounded-[3rem] shadow-[0_8px_32px_rgba(88,88,88,0.02)] min-h-[600px] relative overflow-hidden">
+        {/* Progress bar */}
+        {step < 4 && (
+          <div className="mb-16">
+            <div className="flex items-center justify-between mb-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex flex-col items-center relative z-10 w-1/3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif font-semibold transition-colors ${
+                    step >= i ? "bg-[#E84C3D] text-white" : "bg-[#FFF5EA] text-[#7A7A7A]"
+                  }`}>
+                    {i}
+                  </div>
+                  <span className="text-xs text-[#7A7A7A] mt-2 font-medium hidden md:block">
+                    {i === 1 ? "Service" : i === 2 ? "Schedule" : "Details"}
+                  </span>
+                </div>
+              ))}
             </div>
-          </motion.div>
-
-          <div className="lg:col-span-8 relative overflow-hidden min-h-[500px]">
-            <AnimatePresence mode="wait">
-              {step === 1 && (
-                <motion.div
-                  key="step-1"
-                  variants={stepVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="space-y-8"
-                >
-                  <h3 className="font-display text-4xl font-bold uppercase tracking-tighter mb-8">Choose Your Reading</h3>
-
-                  {servicesLoading ? (
-                    <div className="border border-outline-variant p-6 font-mono text-sm text-on-surface-variant uppercase tracking-widest">
-                      Loading live services...
-                    </div>
-                  ) : servicesError ? (
-                    <div className="border border-primary p-6 font-mono text-sm text-primary uppercase tracking-widest">
-                      {servicesError}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      {services.map((service) => (
-                        <ManifestItem
-                          key={service.id}
-                          title={service.title}
-                          subtitle={service.description}
-                          price={formatCurrency(service.price)}
-                          meta={`${service.durationMin} Min`}
-                          active={selectedService === service.id}
-                          onClick={() => setSelectedService(service.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-12 flex justify-end">
-                    <Button
-                      variant="primary"
-                      onClick={() => setStep(2)}
-                      disabled={!selectedService || servicesLoading || !!servicesError}
-                    >
-                      Next: Date & Time
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 2 && (
-                <motion.div
-                  key="step-2"
-                  variants={stepVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="space-y-8 bg-surface-container p-8 lg:p-12 shadow-ambient"
-                >
-                  <h3 className="font-display text-4xl font-bold uppercase tracking-tighter mb-8 text-on-surface">Select Alignment Date</h3>
-                  <div className="flex flex-col lg:flex-row gap-12">
-                    <div className="flex-1">
-                      <style>{`
-                        .rdp { --rdp-cell-size: 40px; --rdp-accent-color: var(--color-primary); --rdp-background-color: var(--color-surface-container-high); margin: 0; }
-                        .rdp-day_selected, .rdp-day_selected:focus-visible, .rdp-day_selected:hover { background-color: var(--color-primary); color: var(--color-on-primary); }
-                        .rdp-button:hover:not([disabled]):not(.rdp-day_selected) { background-color: var(--color-surface-container-highest); }
-                        .rdp-day_disabled { opacity: 0.3 !important; }
-                      `}</style>
-                      <div className="bg-surface p-6 flex justify-center border border-outline-variant relative">
-                        {calendarLoading && (
-                          <div className="absolute top-2 right-3 font-mono text-xs text-on-surface-variant animate-pulse">Loading...</div>
-                        )}
-                        <DayPicker
-                          mode="single"
-                          selected={date}
-                          onSelect={handleDateSelect}
-                          disabled={isDayDisabled}
-                          month={displayMonth}
-                          onMonthChange={setDisplayMonth}
-                          showOutsideDays
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex-1 flex flex-col">
-                      <h4 className="font-mono text-sm tracking-widest uppercase text-on-surface-variant mb-6">
-                        {date ? format(date, 'EEEE, MMMM do') : 'Select a Date'}
-                      </h4>
-
-                      {calendarError && (
-                        <p className="font-mono text-xs text-primary mb-4 border border-primary px-3 py-2">
-                          {calendarError}
-                        </p>
-                      )}
-
-                      {slotsError && (
-                        <p className="font-mono text-xs text-primary mb-4 border border-primary px-3 py-2">
-                          {slotsError}
-                        </p>
-                      )}
-
-                      {!date ? (
-                        <div className="flex-grow flex items-center justify-center border border-dashed border-outline-variant text-on-surface-variant text-sm font-mono p-6 text-center">
-                          Awaiting date selection...
-                        </div>
-                      ) : slotsLoading ? (
-                        <div className="flex-grow flex items-center justify-center border border-dashed border-outline-variant text-on-surface-variant text-sm font-mono p-6 text-center animate-pulse">
-                          Fetching live slots...
-                        </div>
-                      ) : slots.length === 0 ? (
-                        <div className="flex-grow flex items-center justify-center border border-dashed border-outline-variant text-on-surface-variant text-sm font-mono p-6 text-center">
-                          This day is fully booked for the selected service.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-4">
-                          {slots.map((slot) => {
-                            const isSelected = selectedSlot?.start === slot.start;
-
-                            return (
-                              <button
-                                key={slot.start}
-                                disabled={slot.booked}
-                                onClick={() => setSelectedSlot(slot)}
-                                className={`
-                                  py-3 px-4 font-mono text-sm tracking-wider border transition-colors flex justify-center items-center relative
-                                  ${slot.booked
-                                    ? 'border-outline-variant text-outline opacity-50 cursor-not-allowed bg-surface-container-lowest'
-                                    : isSelected
-                                      ? 'border-primary bg-primary text-on-primary'
-                                      : 'border-outline text-on-surface hover:border-primary hover:text-primary'
-                                  }
-                                `}
-                              >
-                                {slot.label}
-                                {slot.booked && (
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-full h-[1px] bg-outline-variant rotate-12 absolute"></div>
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-12 flex justify-between items-center border-t border-outline-variant pt-8">
-                    <Button variant="ghost" onClick={() => setStep(1)}>Back</Button>
-                    <Button
-                      variant="primary"
-                      onClick={() => setStep(3)}
-                      disabled={!date || !selectedSlot}
-                    >
-                      Next: Intake Form
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 3 && (
-                <motion.div
-                  key="step-3"
-                  variants={stepVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="space-y-8 bg-surface-container p-8 lg:p-12 shadow-ambient"
-                >
-                  <div className="flex justify-between items-end mb-8 border-b border-outline-variant pb-8">
-                    <div>
-                      <h3 className="font-display text-4xl font-bold uppercase tracking-tighter text-on-surface">Intake Information</h3>
-                      <p className="font-mono text-sm text-primary mt-2">
-                        {date && selectedSlot && `${format(date, 'MMM do, yyyy')} @ ${selectedSlot.label}`}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="font-body text-on-surface-variant mb-12">
-                    The brutal truth requires brutal accuracy. Provide your exact birth details below.
-                  </p>
-
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Full Name</label>
-                      <Input
-                        placeholder="John Doe"
-                        value={formData.clientName}
-                        onChange={(event) => handleInputChange('clientName', event.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Email Address</label>
-                        <Input
-                          type="email"
-                          placeholder="john@example.com"
-                          value={formData.clientEmail}
-                          onChange={(event) => handleInputChange('clientEmail', event.target.value)}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Phone Number</label>
-                        <Input
-                          type="tel"
-                          placeholder="+91 98765 43210"
-                          value={formData.clientPhone}
-                          onChange={(event) => handleInputChange('clientPhone', event.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Date of Birth</label>
-                        <Input
-                          type="date"
-                          value={formData.dob}
-                          onChange={(event) => handleInputChange('dob', event.target.value)}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Time of Birth (Exact)</label>
-                        <Input
-                          type="time"
-                          value={formData.birthTime}
-                          onChange={(event) => handleInputChange('birthTime', event.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Location of Birth (City, Country)</label>
-                      <Input
-                        placeholder="Delhi, India"
-                        value={formData.birthPlace}
-                        onChange={(event) => handleInputChange('birthPlace', event.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Primary Question / Focus</label>
-                      <Textarea
-                        placeholder="What do you seek clarity on?"
-                        value={formData.keyConcern}
-                        onChange={(event) => handleInputChange('keyConcern', event.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-mono text-xs text-on-surface-variant uppercase tracking-widest mb-2">Additional Context (Optional)</label>
-                      <Textarea
-                        placeholder="Anything else that will help prepare for your session."
-                        value={formData.customQuestions}
-                        onChange={(event) => handleInputChange('customQuestions', event.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-12 flex justify-between items-center">
-                    <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
-                    <Button variant="primary" onClick={() => setStep(4)} disabled={!intakeFormIsValid}>
-                      Next: Payment
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 4 && selectedServiceRecord && (
-                <motion.div
-                  key="step-4"
-                  variants={stepVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="space-y-8 bg-surface p-8 lg:p-12 shadow-ambient"
-                >
-                  <h3 className="font-display text-4xl font-bold uppercase tracking-tighter mb-8 text-on-surface">Payment Summary</h3>
-                  <div className="border-b-2 border-surface-container pb-8 mb-8 space-y-4">
-                    <ManifestItem
-                      title={selectedServiceRecord.title}
-                      subtitle={selectedServiceRecord.description}
-                      price={formatCurrency(selectedServiceRecord.price)}
-                      meta={`${selectedServiceRecord.durationMin} Minutes`}
-                    />
-                    <div className="flex font-mono text-sm tracking-widest uppercase border border-outline-variant p-4 justify-between text-on-surface">
-                      <span>Schedule:</span>
-                      <span className="text-primary font-bold">
-                        {date && format(date, 'MMM do, yyyy')} | {selectedSlot?.label}
-                      </span>
-                    </div>
-                    <div className="flex font-mono text-sm tracking-widest uppercase border border-outline-variant p-4 justify-between text-on-surface">
-                      <span>Reminder Email:</span>
-                      <span className="text-primary font-bold">{formData.clientEmail}</span>
-                    </div>
-                  </div>
-
-                  {submitError && (
-                    <div className="border border-primary px-4 py-3 font-mono text-xs tracking-widest uppercase text-primary">
-                      {submitError}
-                    </div>
-                  )}
-
-                  {pendingPayment?.paymentMode === 'mock' && (
-                    <div className="border border-primary bg-surface-container px-6 py-6 space-y-4">
-                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                        <div>
-                          <p className="font-mono text-xs tracking-widest uppercase text-primary">Placeholder Payment</p>
-                          <h4 className="font-display text-2xl font-bold uppercase tracking-tighter text-on-surface mt-2">
-                            Demo checkout ready
-                          </h4>
-                        </div>
-                        <div className="border border-outline-variant px-4 py-3 font-mono text-xs tracking-widest uppercase text-on-surface">
-                          Visa ending in 4242
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs tracking-widest uppercase">
-                        <div className="border border-outline-variant px-4 py-3">
-                          <div className="text-on-surface-variant mb-2">Order ID</div>
-                          <div className="text-on-surface break-all">{pendingPayment.orderId}</div>
-                        </div>
-                        <div className="border border-outline-variant px-4 py-3">
-                          <div className="text-on-surface-variant mb-2">Amount</div>
-                          <div className="text-on-surface">{formatCurrency(selectedServiceRecord.price)}</div>
-                        </div>
-                        <div className="border border-outline-variant px-4 py-3">
-                          <div className="text-on-surface-variant mb-2">Status</div>
-                          <div className="text-on-surface">Awaiting confirmation</div>
-                        </div>
-                      </div>
-
-                      <p className="font-body text-on-surface-variant">
-                        This environment is using placeholder payment mode. Complete this demo payment to confirm the slot and send the booked-session email to {formData.clientEmail}.
-                      </p>
-                    </div>
-                  )}
-
-                  <p className="font-body text-on-surface-variant mb-12">
-                    Complete your payment to lock this slot in the database, send the confirmation, and trigger the automated reminder emails to the address you entered in the intake form.
-                  </p>
-
-                  <div className="mt-12 flex justify-between items-center">
-                    <Button variant="ghost" onClick={() => setStep(3)} disabled={isSubmitting}>Back</Button>
-                    <Button variant="primary" onClick={handleConfirmPayment} disabled={isSubmitting}>
-                      {isSubmitting
-                        ? 'Processing...'
-                        : pendingPayment?.paymentMode === 'mock'
-                          ? 'Complete Placeholder Payment'
-                        : pendingPayment?.paymentMode === 'razorpay'
-                          ? 'Open Razorpay Checkout'
-                          : `Continue to Payment`}
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 5 && selectedServiceRecord && (
-                <motion.div
-                  key="step-5"
-                  variants={stepVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="space-y-8 bg-surface p-8 lg:p-12 text-center shadow-ambient"
-                >
-                  <div className="inline-flex w-24 h-24 bg-surface-container rounded-none items-center justify-center mb-8">
-                    <span className="font-display text-4xl text-primary">OK</span>
-                  </div>
-                  <h3 className="font-display text-4xl font-bold uppercase tracking-tighter mb-4 text-on-surface">Session Confirmed</h3>
-                  <p className="font-body text-on-surface-variant mb-12 max-w-lg mx-auto">
-                    Your booking for {selectedServiceRecord.title} is confirmed. {paymentConfirmation?.confirmationEmailSent
-                      ? `A booked-session email has been sent to ${formData.clientEmail}.`
-                      : `We could not confirm the booked-session email send to ${formData.clientEmail} yet.`} Reminder emails will be sent before the session, and the selected slot is now blocked in the live schedule.
-                  </p>
-                  {paymentConfirmation?.meetLink && (
-                    <a
-                      href={paymentConfirmation.meetLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center border border-primary px-6 py-3 font-mono text-xs tracking-widest uppercase text-primary hover:bg-primary hover:text-on-primary transition-colors"
-                    >
-                      Open Session Link
-                    </a>
-                  )}
-                  <Button variant="secondary" onClick={() => { window.location.href = '/'; }}>Return Home</Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="absolute top-[4.5rem] left-[15%] right-[15%] h-[2px] bg-[#FFF5EA] -z-0">
+              <div 
+                className="h-full bg-[#E84C3D] transition-all duration-500 ease-in-out" 
+                style={{ width: `${((step - 1) / 2) * 100}%` }}
+              />
+            </div>
           </div>
-        </div>
-      </section>
+        )}
+
+        <AnimatePresence mode="wait">
+          {renderStepContent()}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

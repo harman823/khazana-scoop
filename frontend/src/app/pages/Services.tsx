@@ -1,228 +1,121 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { motion } from 'motion/react';
-import { Button } from '../components/Button';
-import { ManifestItem } from '../components/ManifestItem';
-import { fetchServices } from '../../lib/api';
-import { useUI } from '../components/UIContext';
+import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
+import { Link } from "react-router";
+import { Star, Clock, MapPin, Globe, Sparkles, Heart } from "lucide-react";
+import { fetchServices } from "../../lib/api";
 
-type ServiceOption = {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  durationMin: number;
-  price: number;
-};
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] as any },
-  },
-};
-
-const scrollVariants = {
-  hidden: { opacity: 0, y: 60 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] as any },
-  },
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+const AESTHETICS = [
+  { icon: Star, bg: "bg-[#FDF3E6]", accent: "text-[#E5BE90]" },
+  { icon: Sparkles, bg: "bg-[#FDEBD0]", accent: "text-[#E84C3D]" },
+  { icon: Heart, bg: "bg-[#FFF5EA]", accent: "text-[#E5BE90]" },
+  { icon: Clock, bg: "bg-white", accent: "text-[#E84C3D]" },
+];
 
 export function Services() {
-  const { isLoaded } = useUI();
-  const navigate = useNavigate();
-  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let ignore = false;
-
-    const loadServices = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetchServices();
-        if (!ignore) {
-          setServices(response.data || []);
+    fetchServices()
+      .then((res) => {
+        if (res.success && res.data) {
+          setServices(res.data);
+        } else if (Array.isArray(res)) {
+          setServices(res);
         }
-      } catch (loadError) {
-        if (!ignore) {
-          setError(loadError instanceof Error ? loadError.message : 'Failed to load services.');
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadServices();
-
-    return () => {
-      ignore = true;
-    };
+      })
+      .catch((err) => console.error("Failed to load services", err))
+      .finally(() => setLoading(false));
   }, []);
 
-  const openBooking = (service?: ServiceOption) => {
-    if (service?.slug) {
-      navigate(`/booking?service=${encodeURIComponent(service.slug)}`);
-      return;
-    }
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
 
-    navigate('/booking');
+  const itemVariants: any = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as any } },
   };
 
   return (
-    <div className="flex flex-col flex-grow bg-surface">
-      <section className="px-6 lg:px-24 py-32 bg-surface-container-lowest text-on-surface">
-        <motion.div variants={containerVariants} initial="hidden" animate={isLoaded ? "visible" : "hidden"}>
-          <div className="overflow-hidden mb-8">
-            <motion.h1
-              variants={itemVariants}
-              className="font-display text-6xl md:text-8xl font-bold uppercase tracking-tighter leading-none max-w-5xl"
-            >
-              The Manifest
-            </motion.h1>
-          </div>
-          <div className="overflow-hidden mb-24">
-            <motion.p
-              variants={itemVariants}
-              className="font-body text-xl md:text-2xl text-on-surface-variant max-w-2xl leading-relaxed"
-            >
-              Our services are designed to cut through the confusion. Select a reading type below to begin your journey toward clarity.
-            </motion.p>
-          </div>
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="max-w-7xl mx-auto space-y-24 pt-20">
+      <section className="text-center max-w-3xl mx-auto">
+        <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-md text-[#7A7A7A] font-medium text-sm mb-8 shadow-sm">
+          <Sparkles className="w-4 h-4 text-[#E5BE90]" />
+          My Offerings
         </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-start">
-          <motion.div
-            className="lg:col-span-4 sticky top-32 hidden lg:block"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={scrollVariants}
-          >
-            <h2 className="font-display text-4xl font-bold uppercase tracking-tighter mb-8">Live Services</h2>
-            <ul className="space-y-4">
-              <li className="font-mono text-primary font-bold tracking-widest uppercase text-sm">
-                {loading ? 'Loading...' : `${services.length} Active Offerings`}
-              </li>
-              <li className="font-mono text-on-surface-variant tracking-widest uppercase text-sm">
-                Live pricing from database
-              </li>
-              <li className="font-mono text-on-surface-variant tracking-widest uppercase text-sm">
-                Duration-aware scheduling
-              </li>
-              <li className="font-mono text-on-surface-variant tracking-widest uppercase text-sm">
-                Reminder emails included
-              </li>
-            </ul>
-          </motion.div>
-
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            {loading ? (
-              <div className="border border-outline-variant p-6 font-mono text-sm text-on-surface-variant uppercase tracking-widest">
-                Loading live services...
-              </div>
-            ) : error ? (
-              <div className="border border-primary p-6 font-mono text-sm text-primary uppercase tracking-widest">
-                {error}
-              </div>
-            ) : (
-              services.map((service, index) => (
-                <motion.div
-                  key={service.id}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, margin: '-50px' }}
-                  variants={scrollVariants}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <ManifestItem
-                    title={service.title}
-                    subtitle={service.description}
-                    price={formatCurrency(service.price)}
-                    meta={`${service.durationMin} Minutes`}
-                    onClick={() => openBooking(service)}
-                  />
-                </motion.div>
-              ))
-            )}
-          </div>
-        </div>
+        <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-serif font-semibold text-[#585858] leading-tight mb-6">
+          Find the Right Path <br /> for You
+        </motion.h1>
+        <motion.p variants={itemVariants} className="text-lg text-[#7A7A7A] leading-relaxed">
+          I offer a variety of intuitive services designed to meet you exactly where you are. Whether you're seeking quick clarity or deep astrological strategy.
+        </motion.p>
       </section>
 
-      <section className="px-6 lg:px-24 py-32 bg-surface-container overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {loading ? (
+          <div className="col-span-1 md:col-span-2 text-center text-[#7A7A7A] py-12">Loading offerings...</div>
+        ) : services.map((service, idx) => {
+          const aesthetic = AESTHETICS[idx % AESTHETICS.length];
+          const Icon = aesthetic.icon;
+          return (
           <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={containerVariants}
+            key={service.id || idx}
+            variants={itemVariants}
+            className={`${aesthetic.bg} p-10 md:p-12 rounded-[3rem] border border-black/5 shadow-[0_8px_32px_rgba(88,88,88,0.02)] flex flex-col h-full hover:shadow-[0_12px_48px_rgba(88,88,88,0.05)] transition-shadow duration-500`}
           >
-            <div className="overflow-hidden mb-8">
-              <motion.h2 variants={itemVariants} className="font-display text-5xl font-bold uppercase tracking-tighter mb-8 text-on-surface">
-                How It Works
-              </motion.h2>
+            <div className="flex items-start justify-between mb-8">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
+                <Icon className={`w-8 h-8 ${aesthetic.accent}`} />
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-serif font-semibold text-[#585858] mb-1">₹{service.price}</div>
+                <div className="flex items-center justify-end gap-1 text-sm text-[#7A7A7A] font-medium">
+                  <Clock className="w-4 h-4" /> {service.durationMin} mins
+                </div>
+              </div>
             </div>
-            <div className="space-y-12">
-              <motion.div variants={itemVariants} className="border-l-4 border-primary pl-6 py-2">
-                <span className="font-mono text-primary font-bold uppercase tracking-widest block mb-2">01. Book</span>
-                <p className="font-body text-xl text-on-surface-variant">
-                  Select your service, choose a live time slot, and lock the booking through checkout.
-                </p>
-              </motion.div>
-              <motion.div variants={itemVariants} className="border-l-4 border-on-surface-variant pl-6 py-2">
-                <span className="font-mono text-on-surface-variant font-bold uppercase tracking-widest block mb-2">02. Prepare</span>
-                <p className="font-body text-xl text-on-surface-variant">
-                  Fill out the intake form with your precise birth details so the session is prepared around your exact chart.
-                </p>
-              </motion.div>
-              <motion.div variants={itemVariants} className="border-l-4 border-on-surface-variant pl-6 py-2">
-                <span className="font-mono text-on-surface-variant font-bold uppercase tracking-widest block mb-2">03. Connect</span>
-                <p className="font-body text-xl text-on-surface-variant">
-                  Receive your confirmation, join details, and reminder emails in your own timezone.
-                </p>
-              </motion.div>
-            </div>
-          </motion.div>
 
-          <motion.div
-            className="flex flex-col justify-end items-end"
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
-          >
-            <Button variant="primary" onClick={() => openBooking(services[0])}>Book Your Session</Button>
+            <div className="flex-1">
+              <h3 className="text-3xl font-serif font-semibold text-[#585858] mb-4">{service.title}</h3>
+              <p className="text-lg text-[#7A7A7A] mb-8 leading-relaxed">
+                {service.description}
+              </p>
+              
+              <div className="flex flex-wrap items-center gap-3 mb-10">
+                <div className="px-4 py-2 bg-white/80 backdrop-blur-md rounded-full text-xs font-semibold text-[#585858] flex items-center gap-1.5 border border-black/5">
+                  {service.sessionMode === "OFFLINE" ? <MapPin className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+                  {service.sessionMode === "OFFLINE" ? "In-person" : "Online Only"}
+                </div>
+              </div>
+            </div>
+
+            <Link
+              to={`/booking?service=${service.id}`}
+              className="w-full text-center px-8 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] hover:shadow-[0_12px_40px_rgba(117,162,158,0.2)] transition-all transform hover:-translate-y-1"
+            >
+              Book Session
+            </Link>
           </motion.div>
+        )})}
+      </section>
+
+      <section className="bg-white rounded-[3rem] p-12 md:p-24 shadow-[0_8px_32px_rgba(88,88,88,0.02)] text-center relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FFF5EA] rounded-full blur-[100px] pointer-events-none" />
+        <div className="relative z-10">
+          <h2 className="text-4xl font-serif font-semibold text-[#585858] mb-6">Need a custom package?</h2>
+          <p className="text-[#7A7A7A] max-w-2xl mx-auto text-lg mb-10">
+            For event bookings, corporate wellness workshops, or specialized multi-session guidance, please reach out directly.
+          </p>
+          <Link
+            to="/contact"
+            className="inline-flex items-center px-8 py-4 bg-white border-2 border-[#E84C3D]/20 text-[#E84C3D] rounded-full text-lg font-semibold hover:border-[#E84C3D] hover:bg-[#FFF5EA]/50 transition-all"
+          >
+            Contact For Custom Package
+          </Link>
         </div>
       </section>
-    </div>
+    </motion.div>
   );
 }

@@ -1,3 +1,4 @@
+import React from "react";
 import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/Layout";
 import { Home } from "./pages/Home";
@@ -5,8 +6,6 @@ import { About } from "./pages/About";
 import { Services } from "./pages/Services";
 import { Booking } from "./pages/Booking";
 import { Contact } from "./pages/Contact";
-import { Webinars } from "./pages/Webinars";
-import { Admin } from "./pages/Admin";
 
 export const router = createBrowserRouter([
   {
@@ -18,9 +17,15 @@ export const router = createBrowserRouter([
       { path: "services", Component: Services },
       { path: "booking", Component: Booking },
       { path: "contact", Component: Contact },
-      { path: "webinars", Component: Webinars },
-      { path: "admin", Component: Admin },
-      { path: "*", Component: () => <div className="p-24 text-center text-on-surface">Not found</div> },
+      {
+        path: "*",
+        Component: () => (
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <h1 className="text-4xl font-serif text-[#125E8A] mb-4">404 - Not Found</h1>
+            <p className="text-[#D47A5A]">The page you are looking for does not exist.</p>
+          </div>
+        ),
+      },
     ],
   },
 ]);
