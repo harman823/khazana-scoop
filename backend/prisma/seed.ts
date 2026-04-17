@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../src/lib/prisma';
 import { defaultServices } from '../src/data/default-services';
-
-const prisma = new PrismaClient();
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 async function main() {
   for (const s of defaultServices) {

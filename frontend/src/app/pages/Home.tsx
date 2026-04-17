@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router";
 import { ArrowRight, Star, Heart, Sun, MapPin, Globe, Sparkles, User, Calendar, MessageCircle, HelpCircle } from "lucide-react";
+import { fetchServices } from "../../lib/api";
 
 export function Home() {
   const containerVariants = {
@@ -13,6 +14,12 @@ export function Home() {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as any } },
   };
+
+  const [dbServices, setDbServices] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchServices().then(res => setDbServices(res.data || res)).catch(console.error);
+  }, []);
 
   const servicesData = [
     {
@@ -122,7 +129,11 @@ export function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {servicesData.map((service, idx) => (
+          {servicesData.map((service, idx) => {
+            const dbService = dbServices.find(s => s.title === service.title);
+            const bookingLink = dbService ? `/booking?service=${dbService.id}` : "/booking";
+
+            return (
             <motion.div key={service.title} variants={itemVariants} whileHover={{ y: -8 }} className={`rounded-[2rem] overflow-hidden ${service.bg} group flex flex-col h-full shadow-sm`}>
               <div className="h-56 overflow-hidden relative">
                 <img src={service.image} alt={service.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -136,12 +147,12 @@ export function Home() {
                   <h3 className="text-2xl font-serif font-semibold text-[#585858] mb-3">{service.title}</h3>
                   <p className="text-[#7A7A7A] leading-relaxed mb-6">{service.desc}</p>
                 </div>
-                <Link to="/booking" className="inline-flex items-center text-[#E84C3D] font-semibold hover:gap-3 transition-all gap-2">
+                <Link to={bookingLink} className="inline-flex items-center text-[#E84C3D] font-semibold hover:gap-3 transition-all gap-2">
                   Book Session <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </motion.div>
-          ))}
+          )})}
         </div>
       </section>
 

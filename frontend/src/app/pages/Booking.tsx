@@ -41,7 +41,10 @@ export function Booking() {
       setServices(res.data || res);
       const params = new URLSearchParams(window.location.search);
       const sId = params.get('service');
-      if (sId) setSelectedService(sId);
+      if (sId) {
+        setSelectedService(sId);
+        setStep(2);
+      }
     }).finally(() => setLoadingServices(false));
   }, []);
 
@@ -298,6 +301,22 @@ export function Booking() {
                   >
                     <MapPin className="w-4 h-4" /> Delhi Clinic
                   </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#585858] mb-2">Payment Method</label>
+                <div className="rounded-[2rem] border border-[#E5BE90]/40 bg-[#FFF5EA] p-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-lg font-semibold text-[#585858]">Razorpay</p>
+                      <p className="mt-1 text-sm text-[#7A7A7A]">
+                        Secure card, UPI, net banking, and wallet payments via Razorpay checkout.
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#C56D45] shadow-sm">
+                      Active
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
