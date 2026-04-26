@@ -1,8 +1,13 @@
 import React from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Moon, Star, Menu, X } from "lucide-react";
+import { ClipboardList, Instagram, Mail, MapPin, MessageCircle, Star, Menu, X } from "lucide-react";
 import { Chatbot } from "./Chatbot";
+
+const GOOGLE_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSc0-_Q7dRxEdjSYo0Q_39y3RbKJk3lzHgTwh5Fvh3RVctmh8Q/viewform?usp=send_form";
+const INSTAGRAM_URL =
+  "https://www.instagram.com/kosmicalign?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
 
 export function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -145,9 +150,32 @@ export function Layout() {
           <div>
             <h4 className="font-serif text-[#585858] text-lg mb-6 font-semibold">Connect</h4>
             <ul className="space-y-4 text-[#7A7A7A]">
-              <li>Delhi, India & Worldwide</li>
-              <li>hello@kosmicalign.com</li>
-              <li>WhatsApp Consultation</li>
+              <li className="flex items-center gap-3">
+                <MapPin className="h-4 w-4 text-[#E84C3D]" />
+                Delhi, India & Worldwide
+              </li>
+              <li>
+                <a href="mailto:hello@kosmicalign.com" className="flex items-center gap-3 hover:text-[#E84C3D] transition-colors">
+                  <Mail className="h-4 w-4 text-[#E84C3D]" />
+                  hello@kosmicalign.com
+                </a>
+              </li>
+              <li className="flex items-center gap-3">
+                <MessageCircle className="h-4 w-4 text-[#E84C3D]" />
+                WhatsApp Consultation
+              </li>
+              <li>
+                <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-[#E84C3D] transition-colors">
+                  <Instagram className="h-4 w-4 text-[#E84C3D]" />
+                  Instagram
+                </a>
+              </li>
+              <li>
+                <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-[#E84C3D] transition-colors">
+                  <ClipboardList className="h-4 w-4 text-[#E84C3D]" />
+                  Google Form
+                </a>
+              </li>
             </ul>
           </div>
         </div>

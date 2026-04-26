@@ -28,42 +28,42 @@ export function Home() {
       desc: "One-on-one sessions tailored to your unique journey and emotional needs.",
       icon: User,
       bg: "bg-[#FDF3E6]", // Light Sand
-      image: "/img/services/ind_therapy.png",
+      image: "/img/services/individual-therapy-relatable.png",
     },
     {
       title: "Adolescence Counselling",
       desc: "Providing a safe, understanding space for teenagers to navigate challenges.",
       icon: Star,
       bg: "bg-[#FDEBD0]", // Light Orange
-      image: "/img/services/adol_therapy.png",
+      image: "/img/services/adolescence-counselling-relatable.png",
     },
     {
       title: "Emotional Counselling",
       desc: "Compassionate support for processing and healing difficult emotions.",
       icon: Heart,
       bg: "bg-[#FDF3E6]", // Light Sand
-      image: "/img/services/emo_therapy.png",
+      image: "/img/services/emotional-counselling-relatable.png",
     },
     {
       title: "Relationship Counselling",
       desc: "Fostering authentic communication and healing between partners.",
       icon: MessageCircle,
       bg: "bg-[#FDEBD0]", // Light Orange
-      image: "/img/services/rel_therapy.png",
+      image: "/img/services/relationship-counselling-relatable.png",
     },
     {
       title: "Repetitive Patterns",
       desc: "Identify and resolve deeply ingrained cycles holding you back.",
       icon: Sparkles,
       bg: "bg-[#FDF3E6]", // Light Sand
-      image: "/img/services/rep_therapy.png",
+      image: "/img/services/repetitive-patterns-relatable.png",
     },
     {
       title: "Feeling 'Stuck in Life'",
       desc: "Find your direction and regain momentum when life feels stagnant.",
       icon: Sun,
       bg: "bg-[#FDEBD0]", // Light Orange
-      image: "/img/services/stuck_therapy.png",
+      image: "/img/services/stuck-in-life-relatable.png",
     },
   ];
 
@@ -89,8 +89,9 @@ export function Home() {
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-32">
       {/* Hero Section */}
       <section className="relative min-h-[85vh] flex items-center justify-center rounded-[3rem] overflow-hidden bg-white mt-4 px-6 md:px-20 py-20 shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
-        <div className="absolute inset-0 opacity-10">
-          <img src="/img/stones_healing.png" alt="Moon sky pastel" className="w-full h-full object-cover" />
+        <div className="absolute inset-0">
+          <img src="/img/hero-ink-sun.png" alt="Red sun ink botanical illustration" className="w-full h-full object-cover opacity-85" />
+          <div className="absolute inset-0 bg-white/30" />
         </div>
         
         <div className="relative z-10 max-w-4xl mx-auto text-center">

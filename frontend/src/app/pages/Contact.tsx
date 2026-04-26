@@ -1,6 +1,11 @@
 import React from "react";
 import { motion } from "motion/react";
-import { MapPin, Phone, Mail, MessageCircle, Send } from "lucide-react";
+import { ClipboardList, Instagram, MapPin, Phone, Mail, MessageCircle, Send } from "lucide-react";
+
+const GOOGLE_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSc0-_Q7dRxEdjSYo0Q_39y3RbKJk3lzHgTwh5Fvh3RVctmh8Q/viewform?usp=send_form";
+const INSTAGRAM_URL =
+  "https://www.instagram.com/kosmicalign?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
 
 export function Contact() {
   const containerVariants = {
@@ -59,12 +64,14 @@ export function Contact() {
                   placeholder="Briefly describe your inquiry..."
                 ></textarea>
               </div>
-              <button
-                type="button"
+              <a
+                href={GOOGLE_FORM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full py-4 bg-[#E84C3D] hover:bg-[#C0392B] text-white rounded-full text-lg font-semibold hover:shadow-[0_12px_40px_rgba(117,162,158,0.2)] transition-all flex items-center justify-center gap-2"
               >
                 Send Request <Send className="w-5 h-5" />
-              </button>
+              </a>
             </form>
           </div>
         </motion.div>
@@ -91,6 +98,38 @@ export function Contact() {
               <a href="mailto:hello@kosmicalign.com" className="text-[#E84C3D] font-semibold hover:underline">hello@kosmicalign.com</a>
             </div>
           </div>
+
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-white rounded-[3rem] p-10 flex items-start gap-6 border border-black/5 hover:shadow-[0_12px_40px_rgba(88,88,88,0.08)] transition-all"
+          >
+            <div className="w-14 h-14 bg-[#FFF5EA] rounded-full flex items-center justify-center shrink-0">
+              <Instagram className="w-6 h-6 text-[#E84C3D]" />
+            </div>
+            <div>
+              <h4 className="text-2xl font-serif font-semibold text-[#585858] mb-2">Instagram</h4>
+              <p className="text-[#7A7A7A] mb-4">Daily affirmations, updates, and behind-the-scenes moments.</p>
+              <span className="text-[#E84C3D] font-semibold hover:underline">@kosmicalign</span>
+            </div>
+          </a>
+
+          <a
+            href={GOOGLE_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-[#FDEBD0] rounded-[3rem] p-10 flex items-start gap-6 border border-white/50 hover:shadow-[0_12px_40px_rgba(88,88,88,0.08)] transition-all"
+          >
+            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shrink-0">
+              <ClipboardList className="w-6 h-6 text-[#E84C3D]" />
+            </div>
+            <div>
+              <h4 className="text-2xl font-serif font-semibold text-[#585858] mb-2">Google Form</h4>
+              <p className="text-[#7A7A7A] mb-4">Share your details and preferred support needs directly with us.</p>
+              <span className="text-[#E84C3D] font-semibold hover:underline">Open Form</span>
+            </div>
+          </a>
           
           <div className="bg-white rounded-[3rem] p-10 flex items-start gap-6 border border-black/5">
             <div className="w-14 h-14 bg-[#FFF5EA] rounded-full flex items-center justify-center shrink-0">

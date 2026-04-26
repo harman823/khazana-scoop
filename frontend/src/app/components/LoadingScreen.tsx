@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { motion } from "motion/react";
-import { Moon } from "lucide-react";
 
 export function LoadingScreen({ onComplete }: { onComplete: () => void }) {
   useEffect(() => {
@@ -72,7 +71,11 @@ export function LoadingScreen({ onComplete }: { onComplete: () => void }) {
           transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
           className="mb-6"
         >
-          <Moon className="w-12 h-12 md:w-16 md:h-16 text-[#E84C3D]" strokeWidth={1.5} />
+          <img
+            src="/img/logo.png"
+            alt="KosmicAlign Logo"
+            className="h-16 w-auto md:h-20"
+          />
         </motion.div>
 
         {/* Character stagger reveal */}
