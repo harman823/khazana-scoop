@@ -2,6 +2,7 @@ import React from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Moon, Star, Menu, X } from "lucide-react";
+import { Chatbot } from "./Chatbot";
 
 export function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -25,7 +26,7 @@ export function Layout() {
       <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
         <nav className="max-w-7xl mx-auto glass-panel rounded-full px-6 py-3 flex items-center justify-between ghost-border shadow-[0_8px_32px_rgba(88,88,88,0.06)]">
           <Link to="/" className="flex items-center gap-2 group">
-            <Moon className="w-6 h-6 text-[#E84C3D] transition-transform group-hover:rotate-12" />
+            <img src="/img/logo.png" alt="KosmicAlign Logo" className="h-8 w-auto transition-transform group-hover:rotate-12" />
             <span className="font-serif text-xl font-semibold tracking-tight text-[#585858]">KosmicAlign</span>
           </Link>
 
@@ -122,7 +123,7 @@ export function Layout() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-6 group">
-              <Moon className="w-6 h-6 text-[#E84C3D]" />
+              <img src="/img/logo.png" alt="KosmicAlign Logo" className="h-8 w-auto" />
               <span className="font-serif text-2xl font-semibold text-[#585858]">KosmicAlign</span>
             </Link>
             <p className="text-[#7A7A7A] leading-relaxed max-w-md font-sans">
@@ -158,6 +159,8 @@ export function Layout() {
           </div>
         </div>
       </footer>
+
+      <Chatbot />
     </div>
   );
 }

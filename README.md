@@ -106,6 +106,12 @@ cd backend
 npm install
 ```
 
+1. Music therapy
+2. Date time in billing
+3. NPL 1st pe krna h (pos)
+4. Payment gateway live (till further notice)
+
+
 ### 2. Configure the backend environment
 
 Copy `.env.example` to `backend/.env` and fill in the values you need.

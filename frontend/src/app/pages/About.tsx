@@ -31,7 +31,7 @@ export function About() {
         <motion.div variants={itemVariants} className="relative">
           <div className="aspect-[4/5] rounded-[3rem] overflow-hidden relative z-10 shadow-[0_8px_32px_rgba(88,88,88,0.05)]">
             <img
-              src="https://images.unsplash.com/photo-1631962590420-077084e3dedc?w=800&q=80"
+              src="/img/stones_healing_alt.png"
               alt="Serene meditation"
               className="w-full h-full object-cover"
             />

@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { Link } from "react-router";
 import { ArrowRight, Star, Heart, Sun, MapPin, Globe, Sparkles, User, Calendar, MessageCircle, HelpCircle } from "lucide-react";
 import { fetchServices } from "../../lib/api";
+import { InstagramFeed } from "../components/InstagramFeed";
 
 export function Home() {
   const containerVariants = {
@@ -89,7 +90,7 @@ export function Home() {
       {/* Hero Section */}
       <section className="relative min-h-[85vh] flex items-center justify-center rounded-[3rem] overflow-hidden bg-white mt-4 px-6 md:px-20 py-20 shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
         <div className="absolute inset-0 opacity-10">
-          <img src="https://images.unsplash.com/photo-1611865879393-7826234b17f3?w=1600&q=80" alt="Moon sky pastel" className="w-full h-full object-cover" />
+          <img src="/img/stones_healing.png" alt="Moon sky pastel" className="w-full h-full object-cover" />
         </div>
         
         <div className="relative z-10 max-w-4xl mx-auto text-center">
@@ -241,11 +242,14 @@ export function Home() {
             transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             className="aspect-[4/5] rounded-[2rem] overflow-hidden relative z-10"
           >
-             <img src="https://images.unsplash.com/photo-1771644306083-7a8240e2b594?w=800&q=80" alt="Abstract soft watercolor" className="w-full h-full object-cover" />
+             <img src="/img/serene_tree.png" alt="Abstract soft watercolor" className="w-full h-full object-cover" />
           </motion.div>
           <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-[#E5BE90] opacity-30 rounded-full blur-[80px] z-0" />
         </motion.div>
       </section>
+
+      {/* Instagram Feed */}
+      <InstagramFeed />
 
       {/* Testimonials */}
       <section className="bg-white rounded-[3rem] py-24 px-6 md:px-12 text-center relative overflow-hidden shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
