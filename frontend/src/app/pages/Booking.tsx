@@ -332,7 +332,7 @@ export function Booking() {
                 disabled={!formData.name || !formData.email || isBooking}
                 className="w-2/3 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
-                {isBooking ? "Processing..." : "Proceed to Pay"} <CreditCard className="w-5 h-5" />
+                {isBooking ? "Processing..." : "Pay ₹1"} <CreditCard className="w-5 h-5" />
               </button>
             </div>
           </motion.div>
