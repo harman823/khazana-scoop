@@ -54,6 +54,7 @@ model Service {
   price            Float
   sessionMode      SessionMode
   idealOutcomes    String[]    @default([])
+  isActive         Boolean     @default(true)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   

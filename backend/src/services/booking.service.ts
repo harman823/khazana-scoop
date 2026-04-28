@@ -13,8 +13,6 @@ const usingMockPayment =
   env.RAZORPAY_KEY_ID.toLowerCase().includes('placeholder') ||
   env.RAZORPAY_KEY_SECRET.toLowerCase().includes('placeholder');
 
-const PAYMENT_AMOUNT_INR = 1;
-
 type BookingPayload = {
   serviceId: string;
   bookingDateTime: string;
@@ -63,7 +61,7 @@ export const createPendingBooking = async (payload: BookingPayload) => {
     where: { id: payload.serviceId },
   });
 
-  if (!service) {
+  if (!service || !service.isActive) {
     throw new Error('Service not found');
   }
 
@@ -75,7 +73,7 @@ export const createPendingBooking = async (payload: BookingPayload) => {
     throw new Error('Slot unavailable due to calendar conflict');
   }
 
-  const order = await createRazorpayOrder(service.title, PAYMENT_AMOUNT_INR);
+  const order = await createRazorpayOrder(service.title, service.price);
 
   return prisma.$transaction(async (tx: any) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`booking-day:${bookingDayKey}`}))`;
@@ -109,7 +107,7 @@ export const createPendingBooking = async (payload: BookingPayload) => {
       data: {
         bookingId: booking.id,
         orderId: order.id,
-        amount: PAYMENT_AMOUNT_INR,
+        amount: service.price,
         currency: 'INR',
         status: 'PENDING',
       },

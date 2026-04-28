@@ -2,26 +2,27 @@ import { prisma } from '../lib/prisma';
 import { defaultServices } from '../data/default-services';
 
 const ensureDefaultServices = async () => {
-  const serviceCount = await prisma.service.count();
-
-  if (serviceCount > 0) {
-    return;
-  }
-
   await prisma.$transaction(async (tx) => {
-    const currentCount = await tx.service.count();
-
-    if (currentCount > 0) {
-      return;
-    }
+    const activeSlugs = defaultServices.map((service) => service.slug).filter((slug): slug is string => Boolean(slug));
 
     for (const service of defaultServices) {
       await tx.service.upsert({
         where: { slug: service.slug },
-        update: {},
+        update: service,
         create: service,
       });
     }
+
+    await tx.service.updateMany({
+      where: {
+        slug: {
+          notIn: activeSlugs,
+        },
+      },
+      data: {
+        isActive: false,
+      },
+    });
   });
 };
 
@@ -29,6 +30,9 @@ export const findAllServices = async () => {
   await ensureDefaultServices();
 
   return prisma.service.findMany({
+    where: {
+      isActive: true,
+    },
     orderBy: {
       createdAt: 'asc',
     },
@@ -38,7 +42,10 @@ export const findAllServices = async () => {
 export const findServiceBySlug = async (slug: string) => {
   await ensureDefaultServices();
 
-  return prisma.service.findUnique({
-    where: { slug },
+  return prisma.service.findFirst({
+    where: {
+      slug,
+      isActive: true,
+    },
   });
 };

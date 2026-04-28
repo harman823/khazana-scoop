@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router";
-import { Star, Clock, MapPin, Globe, Sparkles, Heart } from "lucide-react";
+import { Star, Clock, MapPin, Globe, Sparkles, Heart, Info } from "lucide-react";
 import { fetchServices } from "../../lib/api";
 
 const AESTHETICS = [
@@ -38,6 +38,9 @@ export function Services() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as any } },
   };
 
+  const getPriceUnit = (title: string) =>
+    title === "Intergenerational Trauma Therapy" ? "per head" : "per session";
+
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="max-w-7xl mx-auto space-y-24 pt-20">
       <section className="text-center max-w-3xl mx-auto">
@@ -49,9 +52,24 @@ export function Services() {
           Find the Right Path <br /> for You
         </motion.h1>
         <motion.p variants={itemVariants} className="text-lg text-[#7A7A7A] leading-relaxed">
-          I offer a variety of intuitive services designed to meet you exactly where you are. Whether you're seeking quick clarity or deep astrological strategy.
+          I offer structured counselling and therapy sessions designed to meet you exactly where you are, with one-on-one support for healing, clarity, and alignment.
         </motion.p>
       </section>
+
+      <motion.section variants={itemVariants} className="bg-white rounded-[2rem] border border-[#E5BE90]/30 p-6 md:p-8 shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
+        <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-[#585858]">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-[#E84C3D] mt-1 shrink-0" />
+            <div>
+              <p className="font-semibold">Each session would be of 1½ hr.</p>
+              <p className="text-[#7A7A7A] mt-1">Number of sessions may vary for each client.</p>
+            </div>
+          </div>
+          <div className="rounded-full bg-[#FFF5EA] px-5 py-3 text-sm font-semibold text-[#585858]">
+            Registration charges: ₹105 per head, one-time
+          </div>
+        </div>
+      </motion.section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {loading ? (
@@ -60,59 +78,61 @@ export function Services() {
           const aesthetic = AESTHETICS[idx % AESTHETICS.length];
           const Icon = aesthetic.icon;
           return (
-          <motion.div
-            key={service.id || idx}
-            variants={itemVariants}
-            className={`${aesthetic.bg} p-10 md:p-12 rounded-[3rem] border border-black/5 shadow-[0_8px_32px_rgba(88,88,88,0.02)] flex flex-col h-full hover:shadow-[0_12px_48px_rgba(88,88,88,0.05)] transition-shadow duration-500`}
-          >
-            <div className="flex items-start justify-between mb-8">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
-                <Icon className={`w-8 h-8 ${aesthetic.accent}`} />
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-serif font-semibold text-[#585858] mb-1">₹{service.price}</div>
-                <div className="flex items-center justify-end gap-1 text-sm text-[#7A7A7A] font-medium">
-                  <Clock className="w-4 h-4" /> {service.durationMin} mins
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1">
-              <h3 className="text-3xl font-serif font-semibold text-[#585858] mb-4">{service.title}</h3>
-              <p className="text-lg text-[#7A7A7A] mb-8 leading-relaxed">
-                {service.description}
-              </p>
-              
-              <div className="flex flex-wrap items-center gap-3 mb-10">
-                <div className="px-4 py-2 bg-white/80 backdrop-blur-md rounded-full text-xs font-semibold text-[#585858] flex items-center gap-1.5 border border-black/5">
-                  {service.sessionMode === "OFFLINE" ? <MapPin className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
-                  {service.sessionMode === "OFFLINE" ? "In-person" : "Online Only"}
-                </div>
-              </div>
-            </div>
-
-            <Link
-              to={`/booking?service=${service.id}`}
-              className="w-full text-center px-8 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] hover:shadow-[0_12px_40px_rgba(117,162,158,0.2)] transition-all transform hover:-translate-y-1"
+            <motion.div
+              key={service.id || idx}
+              variants={itemVariants}
+              className={`${aesthetic.bg} p-10 md:p-12 rounded-[3rem] border border-black/5 shadow-[0_8px_32px_rgba(88,88,88,0.02)] flex flex-col h-full hover:shadow-[0_12px_48px_rgba(88,88,88,0.05)] transition-shadow duration-500`}
             >
-              Book Session
-            </Link>
-          </motion.div>
-        )})}
+              <div className="flex items-start justify-between gap-6 mb-8">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0">
+                  <Icon className={`w-8 h-8 ${aesthetic.accent}`} />
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-serif font-semibold text-[#585858] mb-1">₹{service.price}</div>
+                  <div className="text-xs text-[#7A7A7A] font-semibold uppercase tracking-wider mb-2">{getPriceUnit(service.title)}</div>
+                  <div className="flex items-center justify-end gap-1 text-sm text-[#7A7A7A] font-medium">
+                    <Clock className="w-4 h-4" /> {service.durationMin} mins
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-3xl font-serif font-semibold text-[#585858] mb-4">{service.title}</h3>
+                <p className="text-lg text-[#7A7A7A] mb-8 leading-relaxed">
+                  {service.description}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 mb-10">
+                  <div className="px-4 py-2 bg-white/80 backdrop-blur-md rounded-full text-xs font-semibold text-[#585858] flex items-center gap-1.5 border border-black/5">
+                    {service.sessionMode === "OFFLINE" ? <MapPin className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+                    {service.sessionMode === "OFFLINE" ? "In-person" : "Online Only"}
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                to={`/booking?service=${service.id}`}
+                className="w-full text-center px-8 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] hover:shadow-[0_12px_40px_rgba(117,162,158,0.2)] transition-all transform hover:-translate-y-1"
+              >
+                Book Session
+              </Link>
+            </motion.div>
+          );
+        })}
       </section>
 
       <section className="bg-white rounded-[3rem] p-12 md:p-24 shadow-[0_8px_32px_rgba(88,88,88,0.02)] text-center relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FFF5EA] rounded-full blur-[100px] pointer-events-none" />
         <div className="relative z-10">
-          <h2 className="text-4xl font-serif font-semibold text-[#585858] mb-6">Need a custom package?</h2>
+          <h2 className="text-4xl font-serif font-semibold text-[#585858] mb-6">Need a custom path?</h2>
           <p className="text-[#7A7A7A] max-w-2xl mx-auto text-lg mb-10">
-            For event bookings, corporate wellness workshops, or specialized multi-session guidance, please reach out directly.
+            For customised multi-session work or questions about the right therapy path, please reach out directly.
           </p>
           <Link
             to="/contact"
             className="inline-flex items-center px-8 py-4 bg-white border-2 border-[#E84C3D]/20 text-[#E84C3D] rounded-full text-lg font-semibold hover:border-[#E84C3D] hover:bg-[#FFF5EA]/50 transition-all"
           >
-            Contact For Custom Package
+            Contact For Guidance
           </Link>
         </div>
       </section>

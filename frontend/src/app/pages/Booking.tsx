@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { CheckCircle, Calendar, CreditCard, ChevronRight, User, CalendarDays, MapPin } from "lucide-react";
+import { CheckCircle, CreditCard, ChevronRight, CalendarDays, MapPin } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { fetchServices, fetchDaySlots, initiateBooking, fetchMonthlyAvailability, verifyPayment } from "../../lib/api";
@@ -11,16 +11,19 @@ export function Booking() {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState("");
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", location: "online" });
-  
+
   const [services, setServices] = useState<any[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
-  
+
   const [timeSlots, setTimeSlots] = useState<any[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
 
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [unavailableDays, setUnavailableDays] = useState<Date[]>([]);
+
+  const selectedServiceData = services.find((service) => service.id === selectedService);
+  const selectedServicePrice = selectedServiceData?.price ?? 0;
 
   useEffect(() => {
     if (!selectedService) return;
@@ -40,9 +43,9 @@ export function Booking() {
     fetchServices().then(res => {
       setServices(res.data || res);
       const params = new URLSearchParams(window.location.search);
-      const sId = params.get('service');
-      if (sId) {
-        setSelectedService(sId);
+      const serviceId = params.get("service");
+      if (serviceId) {
+        setSelectedService(serviceId);
         setStep(2);
       }
     }).finally(() => setLoadingServices(false));
@@ -51,7 +54,7 @@ export function Booking() {
   useEffect(() => {
     if (selectedDate && selectedService) {
       setLoadingSlots(true);
-      const dateStr = selectedDate.toLocaleDateString('en-CA');
+      const dateStr = selectedDate.toLocaleDateString("en-CA");
       fetchDaySlots(dateStr, selectedService).then(res => {
         if (res.success && res.data?.slots) {
           setTimeSlots(res.data.slots);
@@ -66,31 +69,31 @@ export function Booking() {
       setTimeSlots([]);
     }
   }, [selectedDate, selectedService]);
-  
+
   const handleNext = () => setStep(step + 1);
   const handlePrev = () => setStep(step - 1);
 
   const handleCheckout = async () => {
     if (!selectedService || !selectedDate || !selectedTime || !formData.name || !formData.email || !formData.phone) return;
-    
+
     setIsBooking(true);
     try {
       const payload = {
         serviceId: selectedService,
-        bookingDateTime: selectedTime, 
+        bookingDateTime: selectedTime,
         clientName: formData.name,
         clientEmail: formData.email,
         clientPhone: formData.phone,
         clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
-      
+
       const response = await initiateBooking(payload);
       const pData = response.data || response;
 
-      if (pData.paymentMode === 'mock') {
-         await verifyPayment({ orderId: pData.orderId });
-         handleNext();
-         return;
+      if (pData.paymentMode === "mock") {
+        await verifyPayment({ orderId: pData.orderId });
+        handleNext();
+        return;
       }
 
       const options = {
@@ -124,8 +127,8 @@ export function Booking() {
       };
 
       const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (resp: any) {
-         alert("Payment failed: " + resp.error.description);
+      rzp.on("payment.failed", function (resp: any) {
+        alert("Payment failed: " + resp.error.description);
       });
       rzp.open();
     } catch (err) {
@@ -145,31 +148,40 @@ export function Booking() {
             {loadingServices ? (
               <div className="text-center text-[#7A7A7A] py-8">Loading services...</div>
             ) : (
-            <div className="space-y-4">
-              {services.map((service) => (
-                <div
-                  key={service.id}
-                  onClick={() => setSelectedService(service.id)}
-                  className={`p-6 rounded-[2rem] border-2 cursor-pointer transition-all flex justify-between items-center ${
-                    selectedService === service.id
-                      ? "border-[#E84C3D] bg-[#FDEBD0]"
-                      : "border-transparent bg-[#FFF5EA] hover:bg-[#FDF3E6]"
-                  }`}
-                >
-                  <div>
-                    <h4 className="text-xl font-serif font-semibold text-[#585858] mb-1">{service.title}</h4>
-                    <p className="text-sm text-[#7A7A7A] flex items-center gap-2">
-                      <CalendarDays className="w-4 h-4" /> {service.durationMin} mins
-                    </p>
+              <div className="space-y-4">
+                {services.map((service) => (
+                  <div
+                    key={service.id}
+                    onClick={() => setSelectedService(service.id)}
+                    className={`p-6 rounded-[2rem] border-2 cursor-pointer transition-all flex flex-col md:flex-row gap-4 md:justify-between md:items-center ${
+                      selectedService === service.id
+                        ? "border-[#E84C3D] bg-[#FDEBD0]"
+                        : "border-transparent bg-[#FFF5EA] hover:bg-[#FDF3E6]"
+                    }`}
+                  >
+                    <div>
+                      <h4 className="text-xl font-serif font-semibold text-[#585858] mb-1">{service.title}</h4>
+                      <p className="text-sm text-[#7A7A7A] flex items-center gap-2">
+                        <CalendarDays className="w-4 h-4" /> {service.durationMin} mins
+                      </p>
+                      <p className="text-xs text-[#7A7A7A] mt-2">
+                        Each session would be of 1½ hr. Sessions may vary for each client.
+                      </p>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <span className="font-semibold text-[#585858] bg-white px-4 py-2 rounded-full text-sm shadow-sm">
+                        ₹{service.price}
+                      </span>
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-[#7A7A7A]">
+                        {service.title === "Intergenerational Trauma Therapy" ? "Per head" : "Per session"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-semibold text-[#585858] bg-white px-4 py-2 rounded-full text-sm shadow-sm">
-                      ₹{service.price}
-                    </span>
-                  </div>
+                ))}
+                <div className="rounded-[2rem] bg-white/80 p-5 text-sm text-[#7A7A7A] border border-[#E5BE90]/30">
+                  Registration charges: ₹105 per head, one-time. This is shown for information and is not added to the online payment total here.
                 </div>
-              ))}
-            </div>
+              </div>
             )}
             <button
               onClick={handleNext}
@@ -209,19 +221,20 @@ export function Booking() {
                       const timeStr = slot.start || slot;
                       const isBooked = slot.booked;
                       return (
-                      <button
-                        key={idx}
-                        disabled={isBooked}
-                        onClick={() => setSelectedTime(timeStr)}
-                        className={`py-3 rounded-xl border transition-all text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed ${
-                          selectedTime === timeStr
-                            ? "bg-[#E84C3D] text-white border-[#E84C3D]"
-                            : "bg-white text-[#7A7A7A] border-transparent hover:border-[#E84C3D]/30"
-                        }`}
-                      >
-                        {timeStr.includes('T') ? new Date(timeStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : timeStr}
-                      </button>
-                    )}) : <div className="text-[#7A7A7A] text-sm col-span-2">No slots available.</div>}
+                        <button
+                          key={idx}
+                          disabled={isBooked}
+                          onClick={() => setSelectedTime(timeStr)}
+                          className={`py-3 rounded-xl border transition-all text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed ${
+                            selectedTime === timeStr
+                              ? "bg-[#E84C3D] text-white border-[#E84C3D]"
+                              : "bg-white text-[#7A7A7A] border-transparent hover:border-[#E84C3D]/30"
+                          }`}
+                        >
+                          {timeStr.includes("T") ? new Date(timeStr).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : timeStr}
+                        </button>
+                      );
+                    }) : <div className="text-[#7A7A7A] text-sm col-span-2">No slots available.</div>}
                   </div>
                 ) : (
                   <p className="text-[#7A7A7A] text-sm">Please select a date first.</p>
@@ -319,6 +332,9 @@ export function Booking() {
                   </div>
                 </div>
               </div>
+              <div className="rounded-[2rem] bg-white p-5 text-sm text-[#7A7A7A] border border-[#E5BE90]/30">
+                Registration charges: ₹105 per head, one-time. This is informational and is not added to this online payment total.
+              </div>
             </div>
             <div className="flex gap-4 mt-12 max-w-lg mx-auto">
               <button
@@ -332,7 +348,7 @@ export function Booking() {
                 disabled={!formData.name || !formData.email || isBooking}
                 className="w-2/3 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
-                {isBooking ? "Processing..." : "Pay ₹1"} <CreditCard className="w-5 h-5" />
+                {isBooking ? "Processing..." : `Pay ₹${selectedServicePrice}`} <CreditCard className="w-5 h-5" />
               </button>
             </div>
           </motion.div>
@@ -351,9 +367,9 @@ export function Booking() {
             <div className="bg-[#FFF5EA] p-8 rounded-[2rem] max-w-md mx-auto text-left mb-12">
               <h4 className="font-serif font-semibold text-[#585858] text-xl mb-4 border-b border-[#E5BE90]/30 pb-4">Booking Details</h4>
               <div className="space-y-3 text-sm text-[#7A7A7A]">
-                <div className="flex justify-between"><span className="font-medium">Service:</span> <span>{services.find(s => s.id === selectedService)?.title}</span></div>
+                <div className="flex justify-between"><span className="font-medium">Service:</span> <span>{selectedServiceData?.title}</span></div>
                 <div className="flex justify-between"><span className="font-medium">Date:</span> <span>{selectedDate?.toLocaleDateString()}</span></div>
-                <div className="flex justify-between"><span className="font-medium">Time:</span> <span>{selectedTime.includes('T') ? new Date(selectedTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : selectedTime}</span></div>
+                <div className="flex justify-between"><span className="font-medium">Time:</span> <span>{selectedTime.includes("T") ? new Date(selectedTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : selectedTime}</span></div>
                 <div className="flex justify-between"><span className="font-medium">Mode:</span> <span className="capitalize">{formData.location}</span></div>
               </div>
             </div>
@@ -368,11 +384,10 @@ export function Booking() {
     <div className="max-w-4xl mx-auto pt-20 pb-32">
       <div className="text-center mb-16">
         <h1 className="text-5xl font-serif font-semibold text-[#585858] mb-4">Book Your Session</h1>
-        <p className="text-lg text-[#7A7A7A]">Secure your spot for clarity and healing.</p>
+        <p className="text-lg text-[#7A7A7A]">Secure your spot for clarity, healing, and alignment.</p>
       </div>
 
       <div className="bg-white p-6 md:p-16 rounded-[3rem] shadow-[0_8px_32px_rgba(88,88,88,0.02)] min-h-[600px] relative overflow-hidden">
-        {/* Progress bar */}
         {step < 4 && (
           <div className="mb-16">
             <div className="flex items-center justify-between mb-4">
@@ -390,8 +405,8 @@ export function Booking() {
               ))}
             </div>
             <div className="absolute top-[4.5rem] left-[15%] right-[15%] h-[2px] bg-[#FFF5EA] -z-0">
-              <div 
-                className="h-full bg-[#E84C3D] transition-all duration-500 ease-in-out" 
+              <div
+                className="h-full bg-[#E84C3D] transition-all duration-500 ease-in-out"
                 style={{ width: `${((step - 1) / 2) * 100}%` }}
               />
             </div>
