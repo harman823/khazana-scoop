@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router";
-import { ArrowRight, Star, Heart, Sun, MapPin, Globe, Sparkles, User, Calendar, MessageCircle, HelpCircle } from "lucide-react";
+import { ArrowRight, Star, Heart, Sun, MapPin, Globe, Sparkles, User, Calendar, MessageCircle } from "lucide-react";
 import { fetchServices } from "../../lib/api";
+import { FALLBACK_SERVICES, normalizeServicesResponse } from "../../lib/services";
 import { InstagramFeed } from "../components/InstagramFeed";
 
 export function Home() {
@@ -19,7 +20,9 @@ export function Home() {
   const [dbServices, setDbServices] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchServices().then(res => setDbServices(res.data || res)).catch(console.error);
+    fetchServices()
+      .then((res) => setDbServices(normalizeServicesResponse(res)))
+      .catch(() => setDbServices(FALLBACK_SERVICES));
   }, []);
 
   const servicesData = [
@@ -97,8 +100,8 @@ export function Home() {
       {/* Hero Section */}
       <section className="relative min-h-[85vh] flex items-center justify-center rounded-[3rem] overflow-hidden bg-white mt-4 px-6 md:px-20 py-20 shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
         <div className="absolute inset-0">
-          <img src="/img/hero-ink-sun.png" alt="Red sun ink botanical illustration" className="w-full h-full object-cover opacity-85" />
-          <div className="absolute inset-0 bg-white/30" />
+          <img src="/img/hero-ink-sun.png" alt="Minimal ink botanical illustration" className="w-full h-full object-cover opacity-35 grayscale saturate-50" />
+          <div className="absolute inset-0 bg-white/65" />
         </div>
         
         <div className="relative z-10 max-w-4xl mx-auto text-center">
@@ -145,8 +148,8 @@ export function Home() {
             return (
             <motion.div key={service.title} variants={itemVariants} whileHover={{ y: -8 }} className={`rounded-[2rem] overflow-hidden ${service.bg} group flex flex-col h-full shadow-sm`}>
               <div className="h-56 overflow-hidden relative">
-                <img src={service.image} alt={service.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#585858]/30 to-transparent" />
+                <img src={service.image} alt={service.title} className="w-full h-full object-cover opacity-70 grayscale saturate-50 transition-transform duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-white/20" />
               </div>
               <div className="p-8 flex-1 flex flex-col justify-between bg-white/60 backdrop-blur-sm">
                 <div>

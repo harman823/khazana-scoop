@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { Link } from "react-router";
 import { Star, Clock, MapPin, Globe, Sparkles, Heart, Info } from "lucide-react";
 import { fetchServices } from "../../lib/api";
+import { FALLBACK_SERVICES, REGISTRATION_PRICE, getServicePriceUnit, normalizeServicesResponse } from "../../lib/services";
 
 const AESTHETICS = [
   { icon: Star, bg: "bg-[#FDF3E6]", accent: "text-[#E5BE90]" },
@@ -18,13 +19,12 @@ export function Services() {
   useEffect(() => {
     fetchServices()
       .then((res) => {
-        if (res.success && res.data) {
-          setServices(res.data);
-        } else if (Array.isArray(res)) {
-          setServices(res);
-        }
+        setServices(normalizeServicesResponse(res));
       })
-      .catch((err) => console.error("Failed to load services", err))
+      .catch((err) => {
+        console.error("Failed to load services", err);
+        setServices(FALLBACK_SERVICES);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -37,9 +37,6 @@ export function Services() {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as any } },
   };
-
-  const getPriceUnit = (title: string) =>
-    title === "Intergenerational Trauma Therapy" ? "per head" : "per session";
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="max-w-7xl mx-auto space-y-24 pt-20">
@@ -66,7 +63,7 @@ export function Services() {
             </div>
           </div>
           <div className="rounded-full bg-[#FFF5EA] px-5 py-3 text-sm font-semibold text-[#585858]">
-            Registration charges: ₹105 per head, one-time
+            Registration charges: ₹{REGISTRATION_PRICE} per head, one-time
           </div>
         </div>
       </motion.section>
@@ -89,7 +86,7 @@ export function Services() {
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-serif font-semibold text-[#585858] mb-1">₹{service.price}</div>
-                  <div className="text-xs text-[#7A7A7A] font-semibold uppercase tracking-wider mb-2">{getPriceUnit(service.title)}</div>
+                  <div className="text-xs text-[#7A7A7A] font-semibold uppercase tracking-wider mb-2">{getServicePriceUnit(service.title)}</div>
                   <div className="flex items-center justify-end gap-1 text-sm text-[#7A7A7A] font-medium">
                     <Clock className="w-4 h-4" /> {service.durationMin} mins
                   </div>
@@ -107,6 +104,9 @@ export function Services() {
                     {service.sessionMode === "OFFLINE" ? <MapPin className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
                     {service.sessionMode === "OFFLINE" ? "In-person" : "Online Only"}
                   </div>
+                  <div className="px-4 py-2 bg-white/80 backdrop-blur-md rounded-full text-xs font-semibold text-[#585858] border border-black/5">
+                    Registration ₹{REGISTRATION_PRICE} one-time
+                  </div>
                 </div>
               </div>
 
@@ -121,21 +121,6 @@ export function Services() {
         })}
       </section>
 
-      <section className="bg-white rounded-[3rem] p-12 md:p-24 shadow-[0_8px_32px_rgba(88,88,88,0.02)] text-center relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FFF5EA] rounded-full blur-[100px] pointer-events-none" />
-        <div className="relative z-10">
-          <h2 className="text-4xl font-serif font-semibold text-[#585858] mb-6">Need a custom path?</h2>
-          <p className="text-[#7A7A7A] max-w-2xl mx-auto text-lg mb-10">
-            For customised multi-session work or questions about the right therapy path, please reach out directly.
-          </p>
-          <Link
-            to="/contact"
-            className="inline-flex items-center px-8 py-4 bg-white border-2 border-[#E84C3D]/20 text-[#E84C3D] rounded-full text-lg font-semibold hover:border-[#E84C3D] hover:bg-[#FFF5EA]/50 transition-all"
-          >
-            Contact For Guidance
-          </Link>
-        </div>
-      </section>
     </motion.div>
   );
 }

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { CheckCircle, CreditCard, ChevronRight, CalendarDays, MapPin } from "lucide-react";
+import { CheckCircle, ChevronRight, CalendarDays, MapPin } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { fetchServices, fetchDaySlots, initiateBooking, fetchMonthlyAvailability, verifyPayment } from "../../lib/api";
+import { FALLBACK_SERVICES, REGISTRATION_PRICE, getServicePriceUnit, normalizeServicesResponse } from "../../lib/services";
+
+const ENABLE_RAZORPAY_CHECKOUT = false;
 
 export function Booking() {
   const [step, setStep] = useState(1);
@@ -41,13 +44,16 @@ export function Booking() {
 
   useEffect(() => {
     fetchServices().then(res => {
-      setServices(res.data || res);
+      setServices(normalizeServicesResponse(res));
       const params = new URLSearchParams(window.location.search);
       const serviceId = params.get("service");
       if (serviceId) {
         setSelectedService(serviceId);
         setStep(2);
       }
+    }).catch((err) => {
+      console.error("Failed to load services", err);
+      setServices(FALLBACK_SERVICES);
     }).finally(() => setLoadingServices(false));
   }, []);
 
@@ -78,6 +84,11 @@ export function Booking() {
 
     setIsBooking(true);
     try {
+      if (!ENABLE_RAZORPAY_CHECKOUT) {
+        handleNext();
+        return;
+      }
+
       const payload = {
         serviceId: selectedService,
         bookingDateTime: selectedTime,
@@ -133,7 +144,7 @@ export function Booking() {
       rzp.open();
     } catch (err) {
       console.error("Booking failed:", err);
-      alert("Failed to initiate booking. Check console.");
+      alert("Failed to submit booking request. Please contact support.");
     } finally {
       setIsBooking(false);
     }
@@ -173,13 +184,16 @@ export function Booking() {
                         ₹{service.price}
                       </span>
                       <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-[#7A7A7A]">
-                        {service.title === "Intergenerational Trauma Therapy" ? "Per head" : "Per session"}
+                        {getServicePriceUnit(service.title)}
+                      </p>
+                      <p className="mt-2 text-xs font-semibold text-[#7A7A7A]">
+                        Registration ₹{REGISTRATION_PRICE}
                       </p>
                     </div>
                   </div>
                 ))}
                 <div className="rounded-[2rem] bg-white/80 p-5 text-sm text-[#7A7A7A] border border-[#E5BE90]/30">
-                  Registration charges: ₹105 per head, one-time. This is shown for information and is not added to the online payment total here.
+                  Registration charges: ₹{REGISTRATION_PRICE} per head, one-time.
                 </div>
               </div>
             )}
@@ -316,24 +330,8 @@ export function Booking() {
                   </button>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#585858] mb-2">Payment Method</label>
-                <div className="rounded-[2rem] border border-[#E5BE90]/40 bg-[#FFF5EA] p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-lg font-semibold text-[#585858]">Razorpay</p>
-                      <p className="mt-1 text-sm text-[#7A7A7A]">
-                        Secure card, UPI, net banking, and wallet payments via Razorpay checkout.
-                      </p>
-                    </div>
-                    <div className="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#C56D45] shadow-sm">
-                      Active
-                    </div>
-                  </div>
-                </div>
-              </div>
               <div className="rounded-[2rem] bg-white p-5 text-sm text-[#7A7A7A] border border-[#E5BE90]/30">
-                Registration charges: ₹105 per head, one-time. This is informational and is not added to this online payment total.
+                Registration charges: ₹{REGISTRATION_PRICE} per head, one-time. Payment collection is currently offline.
               </div>
             </div>
             <div className="flex gap-4 mt-12 max-w-lg mx-auto">
@@ -345,10 +343,10 @@ export function Booking() {
               </button>
               <button
                 onClick={handleCheckout}
-                disabled={!formData.name || !formData.email || isBooking}
+                disabled={!formData.name || !formData.email || !formData.phone || isBooking}
                 className="w-2/3 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
-                {isBooking ? "Processing..." : `Pay ₹${selectedServicePrice}`} <CreditCard className="w-5 h-5" />
+                {isBooking ? "Processing..." : "Submit Request"} <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </motion.div>
@@ -360,9 +358,9 @@ export function Booking() {
               <CheckCircle className="w-12 h-12 text-[#E84C3D] absolute z-10" />
               <div className="absolute inset-0 bg-[#FDEBD0] animate-ping rounded-full opacity-50" />
             </div>
-            <h3 className="text-4xl font-serif font-semibold text-[#585858] mb-4">Payment Initiated / Mocked</h3>
+            <h3 className="text-4xl font-serif font-semibold text-[#585858] mb-4">Session Request Received</h3>
             <p className="text-[#7A7A7A] text-lg max-w-md mx-auto mb-8">
-              Your session booking was successfully pushed to the backend. Please check the dashboard or email.
+              Thank you. Your selected session details have been captured, and the team will coordinate confirmation and payment offline.
             </p>
             <div className="bg-[#FFF5EA] p-8 rounded-[2rem] max-w-md mx-auto text-left mb-12">
               <h4 className="font-serif font-semibold text-[#585858] text-xl mb-4 border-b border-[#E5BE90]/30 pb-4">Booking Details</h4>
@@ -371,6 +369,8 @@ export function Booking() {
                 <div className="flex justify-between"><span className="font-medium">Date:</span> <span>{selectedDate?.toLocaleDateString()}</span></div>
                 <div className="flex justify-between"><span className="font-medium">Time:</span> <span>{selectedTime.includes("T") ? new Date(selectedTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : selectedTime}</span></div>
                 <div className="flex justify-between"><span className="font-medium">Mode:</span> <span className="capitalize">{formData.location}</span></div>
+                <div className="flex justify-between"><span className="font-medium">Session Fee:</span> <span>₹{selectedServicePrice}</span></div>
+                <div className="flex justify-between"><span className="font-medium">Registration:</span> <span>₹{REGISTRATION_PRICE}</span></div>
               </div>
             </div>
           </motion.div>
