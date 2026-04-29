@@ -258,15 +258,6 @@ export function Home() {
           <h2 className="text-3xl md:text-4xl font-serif text-[#585858] font-medium leading-relaxed mb-12">
             "I've never had such a supportive experience in a session. The insight was excellent, and the professional care is unmatched. Highly recommended!"
           </h2>
-          <div className="flex items-center justify-center gap-4">
-            <div className="w-14 h-14 bg-[#E84C3D] rounded-full flex items-center justify-center text-white font-serif font-semibold text-xl">
-              AL
-            </div>
-            <div className="text-left">
-              <div className="font-semibold text-[#585858]">Alisha Meglio</div>
-              <div className="text-sm text-[#7A7A7A]">Verified Client</div>
-            </div>
-          </div>
         </motion.div>
       </section>
     </motion.div>
