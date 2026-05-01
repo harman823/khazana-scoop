@@ -8,12 +8,16 @@ import { InstagramFeed } from "../components/InstagramFeed";
 
 const fallingPetals = [
   { x: "54%", y: "49%", size: 8, delay: 0, drift: 16 },
+  { x: "59%", y: "46%", size: 6, delay: 0.35, drift: -10 },
   { x: "61%", y: "42%", size: 7, delay: 0.7, drift: -12 },
+  { x: "66%", y: "45%", size: 6, delay: 1.05, drift: 13 },
   { x: "69%", y: "47%", size: 9, delay: 1.4, drift: 18 },
-  { x: "76%", y: "45%", size: 7, delay: 2.1, drift: -14 },
-  { x: "84%", y: "48%", size: 8, delay: 2.8, drift: 12 },
-  { x: "92%", y: "43%", size: 7, delay: 3.5, drift: -16 },
-  { x: "97%", y: "40%", size: 8, delay: 4.2, drift: 14 },
+  { x: "76%", y: "45%", size: 7, delay: 1.75, drift: -14 },
+  { x: "80%", y: "47%", size: 6, delay: 2.1, drift: 10 },
+  { x: "84%", y: "48%", size: 8, delay: 2.45, drift: 12 },
+  { x: "89%", y: "45%", size: 6, delay: 2.8, drift: -11 },
+  { x: "92%", y: "43%", size: 7, delay: 3.15, drift: -16 },
+  { x: "97%", y: "40%", size: 8, delay: 3.5, drift: 14 },
 ];
 
 function HeroTreeIllustration() {
@@ -102,7 +106,7 @@ function HeroTreeIllustration() {
             scale: [0.95, 0.98, 0.88, 0.72],
           }}
           transition={{
-            duration: 7.2 + index * 0.22,
+            duration: 5.4 + index * 0.12,
             delay: petal.delay,
             repeat: Infinity,
             repeatType: "loop",

@@ -9,6 +9,19 @@ const GOOGLE_FORM_URL =
 const INSTAGRAM_URL =
   "https://www.instagram.com/kosmicalign?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
 
+function LogoMark({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`block h-8 w-8 shrink-0 bg-[#102A43] transition-transform group-hover:rotate-12 ${className}`}
+      style={{
+        WebkitMask: "url('/img/logo.png') center / contain no-repeat",
+        mask: "url('/img/logo.png') center / contain no-repeat",
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const location = useLocation();
@@ -31,8 +44,8 @@ export function Layout() {
       <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
         <nav className="max-w-7xl mx-auto glass-panel rounded-full px-6 py-3 flex items-center justify-between ghost-border shadow-[0_8px_32px_rgba(88,88,88,0.06)]">
           <Link to="/" className="flex items-center gap-2 group">
-            <img src="/img/logo.png" alt="KosmicAlign Logo" className="h-8 w-auto transition-transform group-hover:rotate-12" />
-            <span className="font-serif text-xl font-semibold tracking-tight text-[#585858]">KosmicAlign</span>
+            <LogoMark />
+            <span className="font-serif text-xl font-semibold tracking-tight text-[#102A43]">KosmicAlign</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -128,8 +141,8 @@ export function Layout() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-6 group">
-              <img src="/img/logo.png" alt="KosmicAlign Logo" className="h-8 w-auto" />
-              <span className="font-serif text-2xl font-semibold text-[#585858]">KosmicAlign</span>
+              <LogoMark className="transition-none group-hover:rotate-0" />
+              <span className="font-serif text-2xl font-semibold text-[#102A43]">KosmicAlign</span>
             </Link>
             <p className="text-[#7A7A7A] leading-relaxed max-w-md font-sans">
               A holistic counselling and therapy space for structured healing, inner alignment, and support through life's tough moments.
