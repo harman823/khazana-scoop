@@ -6,6 +6,112 @@ import { fetchServices } from "../../lib/api";
 import { FALLBACK_SERVICES, normalizeServicesResponse } from "../../lib/services";
 import { InstagramFeed } from "../components/InstagramFeed";
 
+const fallingLeaves = [
+  { x: "72%", y: "19%", size: 18, delay: 0, rotate: -24 },
+  { x: "82%", y: "27%", size: 14, delay: 0.8, rotate: 18 },
+  { x: "93%", y: "18%", size: 16, delay: 1.4, rotate: -10 },
+  { x: "67%", y: "37%", size: 12, delay: 1.1, rotate: 32 },
+  { x: "87%", y: "45%", size: 15, delay: 0.4, rotate: -34 },
+  { x: "75%", y: "54%", size: 13, delay: 1.8, rotate: 16 },
+];
+
+function HeroTreeIllustration() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+      <motion.svg
+        viewBox="0 0 1100 620"
+        preserveAspectRatio="xMidYMid slice"
+        className="absolute inset-y-0 right-[-8%] h-full w-[94%] min-w-[720px] opacity-95"
+        initial={{ opacity: 0, x: 36 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <defs>
+          <pattern id="hero-bark-lines" width="18" height="18" patternUnits="userSpaceOnUse">
+            <path d="M0 4 C6 0 12 8 18 4 M0 12 C6 8 12 16 18 12" fill="none" stroke="#EEE5D3" strokeWidth="2" />
+          </pattern>
+          <filter id="soft-leaf-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="#2E2455" floodOpacity="0.12" />
+          </filter>
+        </defs>
+
+        <g filter="url(#soft-leaf-shadow)" opacity="0.96">
+          <circle cx="520" cy="-38" r="150" fill="#32115F" />
+          <circle cx="670" cy="-16" r="170" fill="#3C146D" />
+          <circle cx="830" cy="-22" r="158" fill="#32115F" />
+          <circle cx="980" cy="16" r="152" fill="#3C146D" />
+          <circle cx="735" cy="82" r="132" fill="#32115F" />
+          <circle cx="900" cy="108" r="122" fill="#3C146D" />
+          <circle cx="560" cy="88" r="118" fill="#3C146D" />
+        </g>
+
+        <g opacity="0.82">
+          {Array.from({ length: 95 }).map((_, index) => {
+            const cx = 450 + ((index * 73) % 610);
+            const cy = -12 + ((index * 41) % 180);
+            const rx = 6 + (index % 5);
+            const angle = (index * 29) % 180;
+
+            return (
+              <ellipse
+                key={index}
+                cx={cx}
+                cy={cy}
+                rx={rx}
+                ry={rx * 1.85}
+                transform={`rotate(${angle} ${cx} ${cy})`}
+                fill={index % 3 === 0 ? "#FFFFFF" : "#4B1B7D"}
+                opacity={index % 3 === 0 ? 0.92 : 0.78}
+              />
+            );
+          })}
+        </g>
+
+        <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M920 -30 C946 62 936 148 900 230 C875 287 865 352 900 455 C918 511 920 566 906 634" stroke="#615333" strokeWidth="70" />
+          <path d="M920 -30 C946 62 936 148 900 230 C875 287 865 352 900 455 C918 511 920 566 906 634" stroke="url(#hero-bark-lines)" strokeWidth="70" />
+
+          <path d="M877 242 C760 208 664 172 582 58" stroke="#615333" strokeWidth="58" />
+          <path d="M877 242 C760 208 664 172 582 58" stroke="url(#hero-bark-lines)" strokeWidth="58" />
+
+          <path d="M750 191 C674 228 608 266 536 304" stroke="#615333" strokeWidth="42" />
+          <path d="M750 191 C674 228 608 266 536 304" stroke="url(#hero-bark-lines)" strokeWidth="42" />
+
+          <path d="M926 155 C1010 136 1060 91 1118 20" stroke="#615333" strokeWidth="52" />
+          <path d="M926 155 C1010 136 1060 91 1118 20" stroke="url(#hero-bark-lines)" strokeWidth="52" />
+
+          <path d="M663 128 C622 92 585 54 554 -18" stroke="#615333" strokeWidth="44" />
+          <path d="M663 128 C622 92 585 54 554 -18" stroke="url(#hero-bark-lines)" strokeWidth="44" />
+        </g>
+      </motion.svg>
+
+      {fallingLeaves.map((leaf, index) => (
+        <motion.span
+          key={index}
+          className="absolute block rounded-[70%_0_70%_0] bg-[#3B126D]"
+          style={{ left: leaf.x, top: leaf.y, width: leaf.size, height: leaf.size * 0.55, rotate: leaf.rotate }}
+          animate={{
+            x: [0, index % 2 ? -14 : 18, index % 2 ? 10 : -8, 0],
+            y: [0, 16, 34, 48],
+            rotate: [leaf.rotate, leaf.rotate + 18, leaf.rotate - 14, leaf.rotate + 8],
+            opacity: [0.15, 0.9, 0.72, 0.15],
+          }}
+          transition={{
+            duration: 6.2 + index * 0.35,
+            delay: leaf.delay,
+            repeat: Infinity,
+            repeatType: "loop",
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+
+      <div className="absolute inset-y-0 left-0 w-[62%] bg-gradient-to-r from-white via-white/95 to-white/20" />
+      <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white via-white/80 to-transparent" />
+    </div>
+  );
+}
+
 export function Home() {
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -98,32 +204,32 @@ export function Home() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-32">
       {/* Hero Section */}
-      <section className="relative min-h-[85vh] flex items-center justify-center rounded-[3rem] overflow-hidden bg-white mt-4 px-6 md:px-20 py-20 shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
-        <div className="absolute inset-0">
-          <img src="/img/hero-ink-sun.png" alt="Minimal ink botanical illustration" className="w-full h-full object-cover opacity-35 grayscale saturate-50" />
-          <div className="absolute inset-0 bg-white/65" />
-        </div>
-        
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FFF5EA] text-[#7A7A7A] font-medium text-sm mb-8 shadow-sm">
-            <Star className="w-4 h-4 text-[#E5BE90]" />
+      <section className="relative min-h-[86vh] flex items-center overflow-hidden bg-white mt-4 px-6 sm:px-10 md:px-20 py-20 md:py-28 shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
+        <HeroTreeIllustration />
+
+        <div className="relative z-10 max-w-[46rem]">
+          <motion.p variants={itemVariants} className="mb-6 text-sm font-medium tracking-[0.08em] uppercase text-[#6C5B32]">
             Holistic Guidance Counsellor
-          </motion.div>
-          
-          <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-serif font-semibold text-[#585858] leading-tight mb-8">
-            Here to Help You Navigate <br className="hidden md:block" /> Life's Tough Moments
-          </motion.h1>
-          
-          <motion.p variants={itemVariants} className="text-xl text-[#7A7A7A] mb-12 max-w-2xl mx-auto leading-relaxed">
-            At KosmicAlign, therapy is a process of aligning the mind, body, and spirit. Begin with structured, one-on-one support created around your life story.
           </motion.p>
-          
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link to="/booking" className="w-full sm:w-auto px-8 py-4 bg-[#E84C3D] text-white rounded-full text-lg font-semibold hover:bg-[#C0392B] hover:shadow-[0_12px_40px_rgba(117,162,158,0.3)] transition-all duration-200 ease-out transform hover:scale-[1.02] flex items-center justify-center gap-2">
+
+          <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl md:text-6xl font-serif font-semibold text-[#171717] leading-[1.06] mb-7">
+            Here to help you navigate life's tough moments
+          </motion.h1>
+
+          <motion.p variants={itemVariants} className="text-lg text-[#313131] mb-4 max-w-xl leading-relaxed">
+            At KosmicAlign, therapy is a process of aligning the mind, body, and spirit with structured, one-on-one support created around your life story.
+          </motion.p>
+
+          <motion.p variants={itemVariants} className="text-lg font-serif text-[#171717] mb-9">
+            You do not have to move through it alone.
+          </motion.p>
+
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <Link to="/booking" className="w-full sm:w-auto px-7 py-3.5 bg-white text-[#171717] rounded-full text-base font-semibold transition-all border border-[#171717] hover:bg-[#171717] hover:text-white flex items-center justify-center gap-2">
               Book Your Session <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link to="/services" className="w-full sm:w-auto px-8 py-4 bg-white text-[#585858] rounded-full text-lg font-semibold hover:bg-[#FFF5EA] transition-all border border-[#7A7A7A]/10">
-              Explore Services
+            <Link to="/services" className="w-full sm:w-auto px-2 py-3.5 text-[#171717] text-base font-semibold hover:text-[#4B2B83] transition-all flex items-center justify-center gap-2">
+              Explore Services <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         </div>
