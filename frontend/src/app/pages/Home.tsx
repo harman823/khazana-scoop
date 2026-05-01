@@ -6,99 +6,103 @@ import { fetchServices } from "../../lib/api";
 import { FALLBACK_SERVICES, normalizeServicesResponse } from "../../lib/services";
 import { InstagramFeed } from "../components/InstagramFeed";
 
-const fallingLeaves = [
-  { x: "72%", y: "19%", size: 18, delay: 0, rotate: -24 },
-  { x: "82%", y: "27%", size: 14, delay: 0.8, rotate: 18 },
-  { x: "93%", y: "18%", size: 16, delay: 1.4, rotate: -10 },
-  { x: "67%", y: "37%", size: 12, delay: 1.1, rotate: 32 },
-  { x: "87%", y: "45%", size: 15, delay: 0.4, rotate: -34 },
-  { x: "75%", y: "54%", size: 13, delay: 1.8, rotate: 16 },
+const floatingBerries = [
+  { x: "66%", y: "35%", size: 9, delay: 0 },
+  { x: "78%", y: "28%", size: 7, delay: 0.6 },
+  { x: "88%", y: "42%", size: 8, delay: 1.2 },
+  { x: "94%", y: "54%", size: 7, delay: 1.8 },
+  { x: "58%", y: "62%", size: 6, delay: 2.4 },
+  { x: "82%", y: "68%", size: 8, delay: 3 },
 ];
 
 function HeroTreeIllustration() {
+  const berryClusters = [
+    { x: 240, y: 390, points: [[0, 0], [24, -30], [40, -2], [60, -42], [80, -16], [96, -58]] },
+    { x: 408, y: 438, points: [[0, 0], [28, -18], [48, 10], [64, -28], [84, -6]] },
+    { x: 664, y: 355, points: [[0, 0], [18, -38], [44, -18], [52, -60], [80, -40], [98, -72]] },
+    { x: 822, y: 390, points: [[0, 0], [26, -26], [50, -10], [66, -46], [88, -24], [106, -58]] },
+    { x: 1012, y: 436, points: [[0, 0], [20, -28], [42, -4], [58, -42], [76, -18]] },
+  ];
+
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
       <motion.svg
-        viewBox="0 0 1100 620"
+        viewBox="0 0 1240 700"
         preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-y-0 right-[-8%] h-full w-[94%] min-w-[720px] opacity-95"
-        initial={{ opacity: 0, x: 36 }}
-        animate={{ opacity: 1, x: 0 }}
+        className="absolute inset-y-0 right-[-7%] h-full w-[110%] min-w-[880px] opacity-95"
+        initial={{ opacity: 0, x: 42, y: 10 }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
         transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
       >
         <defs>
-          <pattern id="hero-bark-lines" width="18" height="18" patternUnits="userSpaceOnUse">
-            <path d="M0 4 C6 0 12 8 18 4 M0 12 C6 8 12 16 18 12" fill="none" stroke="#EEE5D3" strokeWidth="2" />
-          </pattern>
-          <filter id="soft-leaf-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="#2E2455" floodOpacity="0.12" />
+          <filter id="branch-shadow" x="-15%" y="-20%" width="130%" height="150%">
+            <feDropShadow dx="0" dy="14" stdDeviation="11" floodColor="#5B2C17" floodOpacity="0.11" />
           </filter>
         </defs>
 
-        <g filter="url(#soft-leaf-shadow)" opacity="0.96">
-          <circle cx="520" cy="-38" r="150" fill="#32115F" />
-          <circle cx="670" cy="-16" r="170" fill="#3C146D" />
-          <circle cx="830" cy="-22" r="158" fill="#32115F" />
-          <circle cx="980" cy="16" r="152" fill="#3C146D" />
-          <circle cx="735" cy="82" r="132" fill="#32115F" />
-          <circle cx="900" cy="108" r="122" fill="#3C146D" />
-          <circle cx="560" cy="88" r="118" fill="#3C146D" />
+        <g filter="url(#branch-shadow)" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M-78 496 C70 476 172 438 280 460 C390 484 456 527 574 492 C684 459 772 392 884 410 C1006 430 1096 388 1288 330" stroke="#5A321F" strokeWidth="16" />
+          <path d="M-60 501 C82 488 172 450 278 471 C392 494 464 530 574 501 C690 472 770 414 886 422 C1006 432 1102 401 1284 348" stroke="#7B4A2A" strokeWidth="7" opacity="0.7" />
+
+          <path d="M128 468 C148 420 160 370 202 342 C228 326 258 315 284 289" stroke="#4D2B1B" strokeWidth="7" />
+          <path d="M196 345 C195 309 205 276 234 252" stroke="#4D2B1B" strokeWidth="4.4" />
+          <path d="M220 330 C246 316 266 300 278 270" stroke="#4D2B1B" strokeWidth="4.4" />
+          <path d="M250 359 C292 346 326 332 360 296" stroke="#4D2B1B" strokeWidth="5.2" />
+          <path d="M320 322 C318 288 330 262 354 240" stroke="#4D2B1B" strokeWidth="3.8" />
+
+          <path d="M390 496 C410 458 432 434 474 414" stroke="#4D2B1B" strokeWidth="5.6" />
+          <path d="M456 424 C454 392 468 370 494 350" stroke="#4D2B1B" strokeWidth="4.2" />
+          <path d="M476 414 C500 412 524 402 548 378" stroke="#4D2B1B" strokeWidth="4.2" />
+
+          <path d="M626 474 C640 428 654 370 690 330" stroke="#4D2B1B" strokeWidth="7" />
+          <path d="M682 340 C674 294 682 260 710 230" stroke="#4D2B1B" strokeWidth="4.5" />
+          <path d="M690 338 C722 312 756 288 790 246" stroke="#4D2B1B" strokeWidth="5.3" />
+          <path d="M756 290 C756 260 770 234 796 214" stroke="#4D2B1B" strokeWidth="3.8" />
+
+          <path d="M804 412 C828 376 858 344 904 320" stroke="#4D2B1B" strokeWidth="5.4" />
+          <path d="M882 331 C886 294 904 266 936 244" stroke="#4D2B1B" strokeWidth="4.2" />
+          <path d="M904 324 C942 318 974 300 1010 270" stroke="#4D2B1B" strokeWidth="4.8" />
+
+          <path d="M982 410 C1010 374 1042 334 1094 304" stroke="#4D2B1B" strokeWidth="5.8" />
+          <path d="M1070 318 C1084 280 1110 250 1142 226" stroke="#4D2B1B" strokeWidth="4.2" />
+          <path d="M1095 304 C1146 306 1194 286 1246 248" stroke="#4D2B1B" strokeWidth="4.4" />
+          <path d="M1210 272 C1242 284 1268 300 1296 326" stroke="#4D2B1B" strokeWidth="3.6" />
         </g>
 
-        <g opacity="0.82">
-          {Array.from({ length: 95 }).map((_, index) => {
-            const cx = 450 + ((index * 73) % 610);
-            const cy = -12 + ((index * 41) % 180);
-            const rx = 6 + (index % 5);
-            const angle = (index * 29) % 180;
-
-            return (
-              <ellipse
-                key={index}
-                cx={cx}
-                cy={cy}
-                rx={rx}
-                ry={rx * 1.85}
-                transform={`rotate(${angle} ${cx} ${cy})`}
-                fill={index % 3 === 0 ? "#FFFFFF" : "#4B1B7D"}
-                opacity={index % 3 === 0 ? 0.92 : 0.78}
+        {berryClusters.map((cluster, clusterIndex) => (
+          <g key={clusterIndex}>
+            {cluster.points.map(([x, y], pointIndex) => (
+              <motion.circle
+                key={`${clusterIndex}-${pointIndex}`}
+                cx={cluster.x + x}
+                cy={cluster.y + y}
+                r={pointIndex % 3 === 0 ? 9 : 7}
+                fill={pointIndex % 2 === 0 ? "#D60E5B" : "#F04A83"}
+                stroke="#FFE3EC"
+                strokeWidth="2"
+                initial={{ scale: 0.72, opacity: 0 }}
+                animate={{ scale: [0.95, 1.08, 0.95], opacity: 1 }}
+                transition={{ duration: 3.8, delay: clusterIndex * 0.18 + pointIndex * 0.08, repeat: Infinity, ease: "easeInOut" }}
               />
-            );
-          })}
-        </g>
-
-        <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M920 -30 C946 62 936 148 900 230 C875 287 865 352 900 455 C918 511 920 566 906 634" stroke="#615333" strokeWidth="70" />
-          <path d="M920 -30 C946 62 936 148 900 230 C875 287 865 352 900 455 C918 511 920 566 906 634" stroke="url(#hero-bark-lines)" strokeWidth="70" />
-
-          <path d="M877 242 C760 208 664 172 582 58" stroke="#615333" strokeWidth="58" />
-          <path d="M877 242 C760 208 664 172 582 58" stroke="url(#hero-bark-lines)" strokeWidth="58" />
-
-          <path d="M750 191 C674 228 608 266 536 304" stroke="#615333" strokeWidth="42" />
-          <path d="M750 191 C674 228 608 266 536 304" stroke="url(#hero-bark-lines)" strokeWidth="42" />
-
-          <path d="M926 155 C1010 136 1060 91 1118 20" stroke="#615333" strokeWidth="52" />
-          <path d="M926 155 C1010 136 1060 91 1118 20" stroke="url(#hero-bark-lines)" strokeWidth="52" />
-
-          <path d="M663 128 C622 92 585 54 554 -18" stroke="#615333" strokeWidth="44" />
-          <path d="M663 128 C622 92 585 54 554 -18" stroke="url(#hero-bark-lines)" strokeWidth="44" />
-        </g>
+            ))}
+          </g>
+        ))}
       </motion.svg>
 
-      {fallingLeaves.map((leaf, index) => (
+      {floatingBerries.map((berry, index) => (
         <motion.span
           key={index}
-          className="absolute block rounded-[70%_0_70%_0] bg-[#3B126D]"
-          style={{ left: leaf.x, top: leaf.y, width: leaf.size, height: leaf.size * 0.55, rotate: leaf.rotate }}
+          className="absolute block rounded-full bg-[#D60E5B]"
+          style={{ left: berry.x, top: berry.y, width: berry.size, height: berry.size }}
           animate={{
-            x: [0, index % 2 ? -14 : 18, index % 2 ? 10 : -8, 0],
-            y: [0, 16, 34, 48],
-            rotate: [leaf.rotate, leaf.rotate + 18, leaf.rotate - 14, leaf.rotate + 8],
-            opacity: [0.15, 0.9, 0.72, 0.15],
+            x: [0, index % 2 ? -10 : 12, index % 2 ? 6 : -8, 0],
+            y: [0, 12, 28, 42],
+            opacity: [0, 0.78, 0.58, 0],
+            scale: [0.7, 1, 0.86, 0.7],
           }}
           transition={{
-            duration: 6.2 + index * 0.35,
-            delay: leaf.delay,
+            duration: 6.6 + index * 0.3,
+            delay: berry.delay,
             repeat: Infinity,
             repeatType: "loop",
             ease: "easeInOut",
@@ -106,8 +110,8 @@ function HeroTreeIllustration() {
         />
       ))}
 
-      <div className="absolute inset-y-0 left-0 w-[62%] bg-gradient-to-r from-white via-white/95 to-white/20" />
-      <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white via-white/80 to-transparent" />
+      <div className="absolute inset-y-0 left-0 w-[58%] bg-gradient-to-r from-[#FFF3E4] via-[#FFF3E4]/78 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#FFF3E4] via-[#FFF3E4]/60 to-transparent" />
     </div>
   );
 }
@@ -204,7 +208,7 @@ export function Home() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-32">
       {/* Hero Section */}
-      <section className="relative min-h-[86vh] flex items-center overflow-hidden bg-white mt-4 px-6 sm:px-10 md:px-20 py-20 md:py-28 shadow-[0_8px_32px_rgba(88,88,88,0.02)]">
+      <section className="relative min-h-[calc(100vh-2rem)] flex items-center overflow-hidden mt-4 px-6 sm:px-10 md:px-20 py-20 md:py-28">
         <HeroTreeIllustration />
 
         <div className="relative z-10 max-w-[46rem]">
