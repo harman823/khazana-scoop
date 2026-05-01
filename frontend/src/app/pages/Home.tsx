@@ -6,13 +6,14 @@ import { fetchServices } from "../../lib/api";
 import { FALLBACK_SERVICES, normalizeServicesResponse } from "../../lib/services";
 import { InstagramFeed } from "../components/InstagramFeed";
 
-const floatingBerries = [
-  { x: "66%", y: "35%", size: 9, delay: 0 },
-  { x: "78%", y: "28%", size: 7, delay: 0.6 },
-  { x: "88%", y: "42%", size: 8, delay: 1.2 },
-  { x: "94%", y: "54%", size: 7, delay: 1.8 },
-  { x: "58%", y: "62%", size: 6, delay: 2.4 },
-  { x: "82%", y: "68%", size: 8, delay: 3 },
+const fallingPetals = [
+  { x: "54%", y: "49%", size: 8, delay: 0, drift: 16 },
+  { x: "61%", y: "42%", size: 7, delay: 0.7, drift: -12 },
+  { x: "69%", y: "47%", size: 9, delay: 1.4, drift: 18 },
+  { x: "76%", y: "45%", size: 7, delay: 2.1, drift: -14 },
+  { x: "84%", y: "48%", size: 8, delay: 2.8, drift: 12 },
+  { x: "92%", y: "43%", size: 7, delay: 3.5, drift: -16 },
+  { x: "97%", y: "40%", size: 8, delay: 4.2, drift: 14 },
 ];
 
 function HeroTreeIllustration() {
@@ -89,20 +90,20 @@ function HeroTreeIllustration() {
         ))}
       </motion.svg>
 
-      {floatingBerries.map((berry, index) => (
+      {fallingPetals.map((petal, index) => (
         <motion.span
           key={index}
           className="absolute block rounded-full bg-[#D60E5B]"
-          style={{ left: berry.x, top: berry.y, width: berry.size, height: berry.size }}
+          style={{ left: petal.x, top: petal.y, width: petal.size, height: petal.size }}
           animate={{
-            x: [0, index % 2 ? -10 : 12, index % 2 ? 6 : -8, 0],
-            y: [0, 12, 28, 42],
-            opacity: [0, 0.78, 0.58, 0],
-            scale: [0.7, 1, 0.86, 0.7],
+            x: [0, petal.drift, petal.drift * -0.35, petal.drift * 0.45],
+            y: [0, 54, 118, 190],
+            opacity: [0, 0.86, 0.55, 0],
+            scale: [0.75, 1, 0.92, 0.72],
           }}
           transition={{
-            duration: 6.6 + index * 0.3,
-            delay: berry.delay,
+            duration: 7.2 + index * 0.22,
+            delay: petal.delay,
             repeat: Infinity,
             repeatType: "loop",
             ease: "easeInOut",
@@ -110,8 +111,8 @@ function HeroTreeIllustration() {
         />
       ))}
 
-      <div className="absolute inset-y-0 left-0 w-[58%] bg-gradient-to-r from-[#FFF3E4] via-[#FFF3E4]/78 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#FFF3E4] via-[#FFF3E4]/60 to-transparent" />
+      <div className="absolute inset-y-0 left-0 w-[58%] bg-[#FFF3E4]/80" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-[#FFF3E4]/70" />
     </div>
   );
 }
