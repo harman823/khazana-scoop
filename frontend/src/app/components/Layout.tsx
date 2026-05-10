@@ -9,12 +9,10 @@ const INSTAGRAM_URL =
 
 function LogoMark({ className = "" }: { className?: string }) {
   return (
-    <span
-      className={`block h-8 w-8 shrink-0 bg-[#125E8A] transition-transform group-hover:rotate-12 ${className}`}
-      style={{
-        WebkitMask: "url('/img/logo-blue.png') center / contain no-repeat",
-        mask: "url('/img/logo-blue.png') center / contain no-repeat",
-      }}
+    <img
+      src="/img/kosmicalign-logo.png"
+      alt=""
+      className={`block h-10 w-10 shrink-0 rounded-full object-cover transition-transform group-hover:rotate-6 ${className}`}
       aria-hidden="true"
     />
   );
@@ -42,7 +40,7 @@ export function Layout() {
       <header className="fixed top-0 left-0 right-0 z-50 px-3 py-3 sm:px-6 sm:py-4">
         <nav className="max-w-7xl mx-auto glass-panel rounded-full px-4 py-3 sm:px-6 flex items-center justify-between ghost-border shadow-[0_8px_32px_rgba(88,88,88,0.06)]">
           <Link to="/" className="flex items-center gap-2 group">
-            <LogoMark className="h-7 w-7 sm:h-8 sm:w-8" />
+            <LogoMark className="h-9 w-9 sm:h-10 sm:w-10" />
             <span className="font-serif text-lg sm:text-xl font-semibold tracking-tight text-[#125E8A]">KosmicAlign</span>
           </Link>
 
@@ -142,7 +140,7 @@ export function Layout() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-7 md:gap-12">
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4 sm:mb-6 group">
-              <LogoMark className="transition-none group-hover:rotate-0" />
+              <LogoMark className="h-11 w-11 transition-none group-hover:rotate-0" />
               <span className="font-serif text-2xl font-semibold text-[#125E8A]">KosmicAlign</span>
             </Link>
             <p className="text-[#7A7A7A] leading-relaxed max-w-md font-sans text-sm sm:text-base">

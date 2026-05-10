@@ -71,13 +71,10 @@ export function LoadingScreen({ onComplete }: { onComplete: () => void }) {
           transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
           className="mb-6"
         >
-          <span
-            className="block h-16 w-16 bg-[#125E8A] md:h-20 md:w-20"
-            style={{
-              WebkitMask: "url('/img/logo-blue.png') center / contain no-repeat",
-              mask: "url('/img/logo-blue.png') center / contain no-repeat",
-            }}
-            aria-label="KosmicAlign Logo"
+          <img
+            src="/img/kosmicalign-logo.png"
+            alt="KosmicAlign Logo"
+            className="block h-24 w-24 rounded-full object-cover shadow-[0_10px_30px_rgba(31,47,130,0.12)] md:h-28 md:w-28"
           />
         </motion.div>
 

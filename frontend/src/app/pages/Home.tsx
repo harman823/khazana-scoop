@@ -33,11 +33,11 @@ function HeroTreeIllustration() {
   ];
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden sm:block" aria-hidden="true">
       <motion.svg
         viewBox="0 0 1240 700"
         preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-y-0 right-[-72%] h-full w-[170%] min-w-[480px] opacity-25 sm:right-[-18%] sm:w-[128%] sm:min-w-[720px] sm:opacity-85 lg:right-[-7%] lg:w-[110%] lg:min-w-[880px] lg:opacity-95"
+        className="absolute inset-y-0 right-[-18%] h-full w-[128%] min-w-[720px] opacity-85 lg:right-[-7%] lg:w-[110%] lg:min-w-[880px] lg:opacity-95"
         initial={{ opacity: 0, x: 42, y: 10 }}
         animate={{ opacity: 1, x: 0, y: 0 }}
         transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
