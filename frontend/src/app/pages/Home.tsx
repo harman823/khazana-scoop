@@ -33,7 +33,7 @@ function HeroTreeIllustration() {
   ];
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden sm:block" aria-hidden="true">
       <motion.svg
         viewBox="0 0 1240 700"
         preserveAspectRatio="xMidYMid slice"
@@ -214,33 +214,33 @@ export function Home() {
   ];
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-20 sm:space-y-24 lg:space-y-32">
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-14 sm:space-y-24 lg:space-y-32">
       {/* Hero Section */}
-      <section className="relative min-h-[calc(100svh-6rem)] sm:min-h-[calc(100vh-2rem)] flex items-center overflow-hidden mt-2 sm:mt-4 px-4 sm:px-10 md:px-20 py-16 sm:py-20 md:py-28 rounded-[1.75rem] sm:rounded-[2.5rem]">
+      <section className="relative flex items-center overflow-hidden rounded-[1.25rem] bg-[#FFF3E4] px-5 py-9 shadow-[0_8px_32px_rgba(88,88,88,0.025)] sm:mt-4 sm:min-h-[calc(100vh-2rem)] sm:rounded-[2.5rem] sm:bg-transparent sm:px-10 sm:py-20 sm:shadow-none md:px-20 md:py-28">
         <HeroTreeIllustration />
 
         <div className="relative z-10 max-w-[46rem]">
-          <motion.p variants={itemVariants} className="mb-4 sm:mb-6 text-xs sm:text-sm font-medium tracking-[0.08em] uppercase text-[#6C5B32]">
+          <motion.p variants={itemVariants} className="mb-3 sm:mb-6 text-[0.68rem] sm:text-sm font-medium tracking-[0.08em] uppercase text-[#6C5B32]">
             Holistic Guidance Counsellor
           </motion.p>
 
-          <motion.h1 variants={itemVariants} className="text-[2.45rem] sm:text-5xl md:text-6xl font-serif font-semibold text-[#171717] leading-[1.08] mb-6 sm:mb-7">
+          <motion.h1 variants={itemVariants} className="text-[2rem] sm:text-5xl md:text-6xl font-serif font-semibold text-[#171717] leading-[1.08] mb-4 sm:mb-7">
             Here to help you navigate life's tough moments
           </motion.h1>
 
-          <motion.p variants={itemVariants} className="text-base sm:text-lg text-[#313131] mb-4 max-w-xl leading-relaxed">
+          <motion.p variants={itemVariants} className="text-[0.95rem] sm:text-lg text-[#313131] mb-3 sm:mb-4 max-w-xl leading-relaxed">
             At KosmicAlign, therapy is a process of aligning the mind, body, and spirit with structured, one-on-one support created around your life story.
           </motion.p>
 
-          <motion.p variants={itemVariants} className="text-base sm:text-lg font-serif text-[#171717] mb-8 sm:mb-9">
+          <motion.p variants={itemVariants} className="text-[0.95rem] sm:text-lg font-serif text-[#171717] mb-6 sm:mb-9">
             You do not have to move through it alone.
           </motion.p>
 
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <Link to="/booking" className="group w-full sm:w-auto px-7 py-3.5 bg-white text-[#171717] rounded-full text-base font-semibold transition-colors duration-300 border border-[#171717] hover:bg-[#171717] hover:text-white flex items-center justify-center gap-2">
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5">
+            <Link to="/booking" className="group w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-white text-[#171717] rounded-full text-sm sm:text-base font-semibold transition-colors duration-300 border border-[#171717] hover:bg-[#171717] hover:text-white flex items-center justify-center gap-2">
               Book Your Session <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link to="/services" className="group w-full sm:w-auto px-2 py-3.5 text-[#171717] text-base font-semibold hover:text-[#4B2B83] transition-colors duration-300 flex items-center justify-center gap-2">
+            <Link to="/services" className="group w-full sm:w-auto px-2 py-2.5 sm:py-3.5 text-[#171717] text-sm sm:text-base font-semibold hover:text-[#4B2B83] transition-colors duration-300 flex items-center justify-center gap-2">
               Explore Services <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
             </Link>
           </motion.div>
