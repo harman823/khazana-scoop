@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm ci --prefix backend && npm ci --prefix frontend",
+  "installCommand": "npm ci --loglevel=error --no-audit --no-fund && npm ci --prefix backend --loglevel=error --no-audit --no-fund && npm ci --prefix frontend --loglevel=error --no-audit --no-fund",
   "buildCommand": "npm --prefix backend run typecheck && npm --prefix frontend run build",
   "outputDirectory": "frontend/dist",
   "functions": {
