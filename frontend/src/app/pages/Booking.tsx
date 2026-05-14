@@ -6,7 +6,7 @@ import "react-day-picker/dist/style.css";
 import { fetchServices, fetchDaySlots, initiateBooking, fetchMonthlyAvailability, verifyPayment } from "../../lib/api";
 import { FALLBACK_SERVICES, REGISTRATION_PRICE, getServicePriceUnit, normalizeServicesResponse } from "../../lib/services";
 
-const ENABLE_RAZORPAY_CHECKOUT = false;
+const ENABLE_RAZORPAY_CHECKOUT = true;
 
 export function Booking() {
   const [step, setStep] = useState(1);
@@ -338,7 +338,7 @@ export function Booking() {
                 </div>
               </div>
               <div className="rounded-[2rem] bg-white p-5 text-sm text-[#7A7A7A] border border-[#E5BE90]/30">
-                Registration charges: ₹{REGISTRATION_PRICE} per head, one-time. Payment collection is currently offline.
+                Registration charges: ₹{REGISTRATION_PRICE} per head, one-time. Payment is collected securely through Razorpay.
               </div>
             </div>
             <div className="flex gap-3 sm:gap-4 mt-8 sm:mt-12 max-w-lg mx-auto">
@@ -353,7 +353,7 @@ export function Booking() {
                 disabled={!formData.name || !formData.email || !formData.phone || isBooking}
                 className="w-2/3 py-3.5 sm:py-4 bg-[#E84C3D] text-white rounded-full text-base sm:text-lg font-semibold hover:bg-[#C0392B] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
-                {isBooking ? "Processing..." : "Submit Request"} <ChevronRight className="w-5 h-5" />
+                {isBooking ? "Processing..." : "Pay & Book"} <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </motion.div>
@@ -367,7 +367,7 @@ export function Booking() {
             </div>
             <h3 className="text-3xl sm:text-4xl font-serif font-semibold text-[#585858] mb-4">Session Request Received</h3>
             <p className="text-[#7A7A7A] text-base sm:text-lg max-w-md mx-auto mb-8">
-              Thank you. Your selected session details have been captured, and the team will coordinate confirmation and payment offline.
+              Thank you. Your booking and payment have been received, and the team will coordinate confirmation shortly.
             </p>
             <div className="bg-[#FFF5EA] p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] max-w-md mx-auto text-left mb-12">
               <h4 className="font-serif font-semibold text-[#585858] text-xl mb-4 border-b border-[#E5BE90]/30 pb-4">Booking Details</h4>

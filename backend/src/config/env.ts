@@ -26,8 +26,7 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().optional(),
   
   // External APIs
-  RAZORPAY_KEY_ID: optionalEnvString,
-  RAZORPAY_API_KEY: optionalEnvString,
+  RAZORPAY_KEY_ID: requiredEnvString('RAZORPAY_KEY_ID is required'),
   RAZORPAY_KEY_SECRET: requiredEnvString('RAZORPAY_KEY_SECRET is required'),
   
   // Google Calendar Integration
@@ -68,19 +67,4 @@ if (!_env.success) {
   process.exit(1);
 }
 
-const parsedEnv = _env.data;
-const razorpayKeyId = parsedEnv.RAZORPAY_KEY_ID || parsedEnv.RAZORPAY_API_KEY;
-
-if (!razorpayKeyId) {
-  console.error('Invalid environment variables:', {
-    RAZORPAY_KEY_ID: {
-      _errors: ['RAZORPAY_KEY_ID or RAZORPAY_API_KEY is required'],
-    },
-  });
-  process.exit(1);
-}
-
-export const env = {
-  ...parsedEnv,
-  RAZORPAY_KEY_ID: razorpayKeyId,
-};
+export const env = _env.data;

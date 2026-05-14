@@ -7,7 +7,7 @@ export const FALLBACK_SERVICES = [
     title: "Individual Therapy Sessions",
     description: "One-on-one customised therapy sessions for personal healing, emotional clarity, and alignment of mind, body, and spirit.",
     durationMin: 90,
-    price: 5100,
+    price: 3111,
     sessionMode: "ONLINE",
   },
   {

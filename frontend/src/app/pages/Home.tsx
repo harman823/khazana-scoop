@@ -23,6 +23,9 @@ const fallingPetals = [
   { x: "97%", y: "40%", size: 8, delay: 3.5, drift: 14 },
 ];
 
+const petalLoopTimes = [0, 0.24, 0.58, 0.76, 0.86, 0.88, 1];
+const bigPetalLoopTimes = [0, 0.28, 0.6, 0.78, 0.88, 0.9, 1];
+
 function HeroTreeIllustration() {
   const berryClusters = [
     { x: 240, y: 390, points: [[0, 0], [24, -30], [40, -2], [60, -42], [80, -16], [96, -58]] },
@@ -88,9 +91,20 @@ function HeroTreeIllustration() {
                 fill={pointIndex % 2 === 0 ? "#D60E5B" : "#F04A83"}
                 stroke="#FFE3EC"
                 strokeWidth="2"
-                initial={{ scale: 0.72, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.8, delay: clusterIndex * 0.12 + pointIndex * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                animate={{
+                  x: [0, 6 - pointIndex * 2, 18 - pointIndex * 3, -6 + pointIndex, -6 + pointIndex, 0, 0],
+                  y: [0, 16, 82, 142, 142, 0, 0],
+                  opacity: [1, 1, 0.62, 0, 0, 0, 1],
+                  scale: [1, 1, 0.93, 0.78, 0.78, 0.78, 1],
+                }}
+                transition={{
+                  duration: 8.2 + clusterIndex * 0.4 + pointIndex * 0.16,
+                  delay: clusterIndex * 0.34 + pointIndex * 0.18,
+                  repeat: Infinity,
+                  repeatType: "loop",
+                  ease: "linear",
+                  times: bigPetalLoopTimes,
+                }}
               />
             ))}
           </g>
@@ -103,17 +117,18 @@ function HeroTreeIllustration() {
           className="absolute hidden rounded-full bg-[#D60E5B] sm:block"
           style={{ left: petal.x, top: petal.y, width: petal.size, height: petal.size }}
           animate={{
-            x: [0, petal.drift, petal.drift * -0.35, petal.drift * 0.45],
-            y: [0, 22, 118, 190],
-            opacity: [0.78, 0.78, 0.5, 0],
-            scale: [0.95, 0.98, 0.88, 0.72],
+            x: [0, petal.drift * 0.35, petal.drift, petal.drift * -0.35, petal.drift * -0.35, 0, 0],
+            y: [0, 20, 116, 198, 198, 0, 0],
+            opacity: [0.8, 0.8, 0.48, 0, 0, 0, 0.8],
+            scale: [0.95, 0.98, 0.88, 0.7, 0.7, 0.7, 0.95],
           }}
           transition={{
-            duration: 5.4 + index * 0.12,
+            duration: 7.4 + index * 0.16,
             delay: petal.delay,
             repeat: Infinity,
             repeatType: "loop",
-            ease: "easeInOut",
+            ease: "linear",
+            times: petalLoopTimes,
           }}
         />
       ))}
