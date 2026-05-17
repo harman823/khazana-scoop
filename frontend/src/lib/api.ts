@@ -71,6 +71,26 @@ export const fetchDaySlots = async (date: string, serviceId?: string) => {
   return response.json(); // { success, data: { slots: [{start, end, label, booked}] } }
 };
 
+export const askChatbot = async (payload: {
+  message: string;
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}) => {
+  const response = await fetch('/api/v1/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || 'Failed to ask assistant');
+  }
+
+  return response.json();
+};
+
 export const fetchAdminDashboard = async (adminKey: string) => {
   const response = await fetch('/api/v1/analytics/dashboard', {
     headers: {

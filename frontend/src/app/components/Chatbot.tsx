@@ -1,89 +1,140 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CalendarDays, ChevronRight, Instagram, Mail, MessageCircle, Send, Sparkles, X } from "lucide-react";
+import { Bot, CalendarDays, Clock, Instagram, Mail, MessageCircle, Send, Sparkles, X } from "lucide-react";
 import { Link } from "react-router";
-import { fetchDaySlots, fetchServices } from "../../lib/api";
-import { FALLBACK_SERVICES, normalizeServicesResponse } from "../../lib/services";
+import { askChatbot } from "../../lib/api";
 
-const INSTAGRAM_URL =
-  "https://www.instagram.com/kosmicalign?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
-const WHATSAPP_NUMBER = "919876543210";
-const WHATSAPP_DISPLAY = "+91 98765 43210";
+type ChatRole = "bot" | "user";
+
+type ServiceCard = {
+  title: string;
+  description: string;
+  price: number;
+  durationMin: number;
+  slug: string;
+};
+
+type SlotGroup = {
+  date: string;
+  day: string;
+  slots: Array<{ label: string; start: string; booked: boolean }>;
+};
+
+type ChatPayload = {
+  services?: ServiceCard[];
+  availability?: SlotGroup[];
+  actions?: Array<{ label: string; href: string; kind: string }>;
+  source?: "openai" | "fallback";
+};
 
 type ChatMessage = {
   id: number;
-  role: "bot" | "user";
+  role: ChatRole;
   text: string;
+  payload?: ChatPayload;
 };
 
 const starterMessages: ChatMessage[] = [
   {
     id: 1,
     role: "bot",
-    text: "Namaste. Ask me about services, prices, booking slots, or how to contact the KosmicAlign team.",
+    text: "Hi, I am here to help gently and clearly. Ask me about services, weekday slots, booking steps, or how to reach the KosmicAlign team.",
   },
 ];
 
 const quickPrompts = [
-  "What services do you offer?",
-  "When are you free?",
-  "How do I book?",
-  "How can I contact admin?",
+  "Show weekday slots",
+  "Which service fits me?",
+  "Explain prices",
+  "Contact admin",
 ];
 
-const normalize = (value: string) => value.toLowerCase().trim();
+const historyFromMessages = (messages: ChatMessage[]) =>
+  messages.slice(-8).map((message) => ({
+    role: message.role === "bot" ? "assistant" as const : "user" as const,
+    content: message.text,
+  }));
 
-const formatSlot = (slot: any) => {
-  const value = slot?.start || slot;
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(price);
 
-  if (typeof value === "string" && value.includes("T")) {
-    return new Date(value).toLocaleString("en-IN", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  }
+function ThinkingDots() {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-[#7A7A7A]">Thinking</span>
+      <span className="flex gap-1">
+        {[0, 1, 2].map((dot) => (
+          <motion.span
+            key={dot}
+            className="h-1.5 w-1.5 rounded-full bg-[#E84C3D]"
+            animate={{ opacity: [0.25, 1, 0.25], y: [0, -3, 0] }}
+            transition={{ duration: 0.9, repeat: Infinity, delay: dot * 0.14 }}
+          />
+        ))}
+      </span>
+    </div>
+  );
+}
 
-  return String(value);
-};
+function MessageDetails({ payload }: { payload?: ChatPayload }) {
+  if (!payload) return null;
 
-const makeFallbackAvailability = () => {
-  const slots: string[] = [];
-  const date = new Date();
+  return (
+    <div className="mt-3 space-y-3">
+      {payload.availability && payload.availability.length > 0 && (
+        <div className="space-y-2">
+          {payload.availability.map((group) => (
+            <div key={group.date} className="rounded-2xl border border-[#E5BE90]/30 bg-[#FFF5EA] p-3">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#585858]">
+                <CalendarDays className="h-3.5 w-3.5 text-[#E84C3D]" />
+                {group.day}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {group.slots.map((slot) => (
+                  <span key={slot.start} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#585858] shadow-sm">
+                    {slot.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-  while (slots.length < 4) {
-    date.setDate(date.getDate() + 1);
-    const day = date.getDay();
-
-    if (day !== 0 && day !== 1) {
-      const label = date.toLocaleDateString("en-IN", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-      });
-      slots.push(`${label}: 11:00 AM, 2:00 PM, or 5:00 PM`);
-    }
-  }
-
-  return slots;
-};
+      {payload.services && payload.services.length > 0 && (
+        <div className="grid gap-2">
+          {payload.services.map((service) => (
+            <div key={service.slug} className="rounded-2xl border border-[#E5BE90]/25 bg-white p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <h4 className="text-sm font-semibold text-[#585858]">{service.title}</h4>
+                <span className="shrink-0 rounded-full bg-[#FFF5EA] px-2.5 py-1 text-[0.68rem] font-semibold text-[#E84C3D]">
+                  {formatPrice(service.price)}
+                </span>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-[#7A7A7A]">{service.description}</p>
+              <div className="mt-2 flex items-center gap-1 text-[0.68rem] font-medium text-[#7A7A7A]">
+                <Clock className="h-3 w-3" /> {service.durationMin} minutes
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [isThinking, setIsThinking] = useState(false);
-  const [services, setServices] = useState<any[]>(FALLBACK_SERVICES);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messageId = useRef(starterMessages.length + 1);
-
-  useEffect(() => {
-    fetchServices()
-      .then((res) => setServices(normalizeServicesResponse(res)))
-      .catch(() => setServices(FALLBACK_SERVICES));
-  }, []);
+  const expanded = messages.length > 2 || isThinking;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -92,131 +143,102 @@ export function Chatbot() {
     });
   }, [messages, isThinking]);
 
-  const serviceSummary = useMemo(
-    () =>
-      services
-        .map((service) => `${service.title} (${service.durationMin || 90} min, Rs ${service.price})`)
-        .join("; "),
-    [services],
-  );
-
-  const findAvailableSlots = async () => {
-    const serviceId = services[0]?.id || FALLBACK_SERVICES[0].id;
-    const found: string[] = [];
-    const date = new Date();
-
-    for (let i = 1; i <= 10 && found.length < 5; i += 1) {
-      date.setDate(date.getDate() + 1);
-      const dateStr = date.toLocaleDateString("en-CA");
-
-      try {
-        const response = await fetchDaySlots(dateStr, serviceId);
-        const openSlots = (response?.data?.slots || [])
-          .filter((slot: any) => !slot.booked)
-          .slice(0, 2)
-          .map(formatSlot);
-
-        found.push(...openSlots);
-      } catch {
-        break;
-      }
-    }
-
-    return found.length > 0 ? found : makeFallbackAvailability();
-  };
-
-  const getBotReply = async (prompt: string) => {
-    const query = normalize(prompt);
-
-    if (query.includes("free") || query.includes("available") || query.includes("slot") || query.includes("time") || query.includes("coming")) {
-      const slots = await findAvailableSlots();
-      return `Upcoming availability usually opens around these times: ${slots.join(" | ")}. For the exact live slot, open Booking and choose your service.`;
-    }
-
-    if (query.includes("service") || query.includes("therapy") || query.includes("counselling") || query.includes("offer") || query.includes("price")) {
-      return `KosmicAlign offers: ${serviceSummary}. Most sessions are 90 minutes and can be booked online or for the Delhi studio where available.`;
-    }
-
-    if (query.includes("book") || query.includes("appointment") || query.includes("session") || query.includes("payment")) {
-      return "To book, choose a service, pick an available date and time, add your details, then complete the secure Razorpay payment. The booking page will guide you step by step.";
-    }
-
-    if (query.includes("contact") || query.includes("admin") || query.includes("whatsapp") || query.includes("instagram") || query.includes("dm") || query.includes("email")) {
-      return `You can contact admin on WhatsApp at ${WHATSAPP_DISPLAY}, Instagram DM at @kosmicalign, or email hello@kosmicalign.com.`;
-    }
-
-    if (query.includes("location") || query.includes("delhi") || query.includes("online")) {
-      return "Sessions are available online worldwide, with in-person support in Delhi when the selected service and schedule allow it.";
-    }
-
-    return "I can help with services, booking steps, upcoming availability, prices, session modes, and admin contact details. Try asking, 'When are you free this week?'";
-  };
-
   const sendMessage = async (text = input) => {
     const trimmed = text.trim();
     if (!trimmed || isThinking) return;
 
+    const nextMessages = [...messages, { id: messageId.current++, role: "user" as const, text: trimmed }];
     setInput("");
-    setMessages((current) => [...current, { id: messageId.current++, role: "user", text: trimmed }]);
+    setMessages(nextMessages);
     setIsThinking(true);
 
-    const reply = await getBotReply(trimmed);
-    setMessages((current) => [...current, { id: messageId.current++, role: "bot", text: reply }]);
-    setIsThinking(false);
+    try {
+      const response = await askChatbot({
+        message: trimmed,
+        history: historyFromMessages(messages),
+      });
+      const data = response.data || {};
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: messageId.current++,
+          role: "bot",
+          text: data.message || "I am here with you. Could you ask that once more in a little more detail?",
+          payload: data,
+        },
+      ]);
+    } catch {
+      setMessages((current) => [
+        ...current,
+        {
+          id: messageId.current++,
+          role: "bot",
+          text: "I could not reach the assistant service just now. You can still use the booking page, WhatsApp, Instagram, or email below.",
+        },
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
   };
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end sm:bottom-6 sm:right-6">
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white rounded-[1.25rem] sm:rounded-[1.75rem] shadow-[0_14px_50px_rgba(88,88,88,0.14)] w-[calc(100vw-2rem)] max-w-[23rem] mb-4 overflow-hidden border border-[#FFF5EA]"
+            exit={{ opacity: 0, y: 20, scale: 0.96 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className={`mb-4 w-[calc(100vw-2rem)] overflow-hidden rounded-[1.25rem] border border-[#FFF5EA] bg-white shadow-[0_18px_70px_rgba(88,88,88,0.16)] transition-all duration-300 ${
+              expanded ? "max-w-[40rem]" : "max-w-[28rem]"
+            }`}
           >
-            <div className="bg-[#E84C3D] p-4 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+            <div className="bg-[#E84C3D] p-4 text-white">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                    <Bot className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg font-semibold leading-tight">KosmicAlign Assistant</h3>
+                    <p className="text-xs text-white/80">Calm guidance, live services, weekday slots</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-serif font-semibold text-lg leading-tight">KosmicAlign</h3>
-                  <p className="text-xs text-white/80">Care desk online</p>
-                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/20"
+                  aria-label="Close chat"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
-                aria-label="Close chat"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
-            <div ref={scrollRef} className="p-4 bg-[#FFF5EA]/55 h-72 overflow-y-auto flex flex-col gap-3">
+            <div ref={scrollRef} className={`flex flex-col gap-4 overflow-y-auto bg-[#FFF5EA]/55 p-4 ${expanded ? "h-[30rem]" : "h-80"}`}>
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                  className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
                     message.role === "bot"
-                      ? "self-start rounded-tl-sm bg-white text-[#585858] border border-[#E5BE90]/20"
+                      ? "self-start rounded-tl-sm border border-[#E5BE90]/20 bg-white text-[#585858]"
                       : "self-end rounded-tr-sm bg-[#E84C3D] text-white"
                   }`}
                 >
-                  {message.text}
+                  <p className="whitespace-pre-line">{message.text}</p>
+                  <MessageDetails payload={message.payload} />
                 </div>
               ))}
               {isThinking && (
-                <div className="self-start rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm text-[#7A7A7A] shadow-sm border border-[#E5BE90]/20">
-                  Checking...
+                <div className="self-start rounded-2xl rounded-tl-sm border border-[#E5BE90]/20 bg-white px-4 py-3 shadow-sm">
+                  <ThinkingDots />
                 </div>
               )}
             </div>
 
-            <div className="px-4 pt-4 bg-white border-t border-[#E5BE90]/20">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="border-t border-[#E5BE90]/20 bg-white px-4 pt-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {quickPrompts.map((prompt) => (
                   <button
                     key={prompt}
@@ -231,7 +253,7 @@ export function Chatbot() {
             </div>
 
             <form
-              className="p-4 bg-white flex items-center gap-2"
+              className="flex items-center gap-2 bg-white p-4"
               onSubmit={(event) => {
                 event.preventDefault();
                 sendMessage();
@@ -241,47 +263,30 @@ export function Chatbot() {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 className="min-w-0 flex-1 rounded-full bg-[#FFF5EA] px-4 py-3 text-sm text-[#585858] outline-none transition-shadow focus:ring-2 focus:ring-[#E84C3D]/25"
-                placeholder="Ask a question..."
+                placeholder="Ask about services, slots, or booking..."
               />
               <button
                 type="submit"
-                className="h-11 w-11 shrink-0 rounded-full bg-[#E84C3D] text-white flex items-center justify-center transition-colors hover:bg-[#C0392B] disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E84C3D] text-white transition-colors hover:bg-[#C0392B] disabled:opacity-50"
                 disabled={!input.trim() || isThinking}
                 aria-label="Send message"
               >
-                <Send className="w-4 h-4" />
+                <Send className="h-4 w-4" />
               </button>
             </form>
 
-            <div className="px-4 pb-4 bg-white grid grid-cols-3 gap-2">
-              <Link
-                to="/booking"
-                onClick={() => setIsOpen(false)}
-                className="rounded-full bg-[#E84C3D] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#C0392B] flex items-center justify-center gap-1"
-              >
-                <CalendarDays className="w-3.5 h-3.5" /> Book
+            <div className="grid grid-cols-4 gap-2 bg-white px-4 pb-4">
+              <Link to="/booking" onClick={() => setIsOpen(false)} className="rounded-full bg-[#E84C3D] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#C0392B]">
+                Book
               </Link>
-              <a
-                href={`https://wa.me/${WHATSAPP_NUMBER}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0] flex items-center justify-center gap-1"
-              >
-                <MessageCircle className="w-3.5 h-3.5" /> WA
+              <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
+                <MessageCircle className="mx-auto h-3.5 w-3.5" />
               </a>
-              <a
-                href={INSTAGRAM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0] flex items-center justify-center gap-1"
-              >
-                <Instagram className="w-3.5 h-3.5" /> DM
+              <a href="https://www.instagram.com/kosmicalign?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
+                <Instagram className="mx-auto h-3.5 w-3.5" />
               </a>
-              <a
-                href="mailto:hello@kosmicalign.com"
-                className="col-span-3 rounded-full bg-white border border-[#E5BE90]/30 px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FFF5EA] flex items-center justify-center gap-1"
-              >
-                <Mail className="w-3.5 h-3.5" /> hello@kosmicalign.com <ChevronRight className="w-3.5 h-3.5" />
+              <a href="mailto:hello@kosmicalign.com" className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
+                <Mail className="mx-auto h-3.5 w-3.5" />
               </a>
             </div>
           </motion.div>
@@ -290,10 +295,10 @@ export function Chatbot() {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 sm:w-16 sm:h-16 bg-[#E84C3D] text-white rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(232,76,61,0.4)] hover:bg-[#C0392B] hover:scale-105 active:scale-95 transition-all duration-300"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-[#E84C3D] text-white shadow-[0_8px_32px_rgba(232,76,61,0.4)] transition-all duration-300 hover:scale-105 hover:bg-[#C0392B] active:scale-95 sm:h-16 sm:w-16"
         aria-label={isOpen ? "Close chat" : "Open chat"}
       >
-        {isOpen ? <X className="w-7 h-7" /> : <MessageCircle className="w-7 h-7" />}
+        {isOpen ? <X className="h-7 w-7" /> : <Sparkles className="h-7 w-7" />}
       </button>
     </div>
   );

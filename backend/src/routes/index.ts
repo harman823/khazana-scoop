@@ -8,6 +8,7 @@ import leadRoutes from './lead.routes';
 import webinarRoutes from './webinar.routes';
 import analyticsRoutes from './analytics.routes';
 import calendarRoutes from './calendar.routes';
+import chatRoutes from './chat.routes';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/leads', leadRoutes);
 router.use('/webinars', webinarRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/calendar', calendarRoutes);
+router.use('/chat', chatRoutes);
 
 export default router;

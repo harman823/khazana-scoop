@@ -42,6 +42,10 @@ const envSchema = z.object({
   GOOGLE_REFRESH_TOKEN: z.string().optional(),
   GOOGLE_TOKEN_EXPIRY_DATE: z.coerce.number().optional(),
 
+  // AI Assistant
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().optional().default('gpt-5-mini'),
+
   // Appointment Scheduling
   START_TIME: z.string().optional().default('10:00'),
   END_TIME: z.string().optional().default('18:00'),
