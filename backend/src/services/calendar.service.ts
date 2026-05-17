@@ -111,6 +111,15 @@ const toIndiaDateTime = (date: string, time: string) => {
   return dayjs(`${date}T${normalizedTime}${INDIA_TIME_OFFSET}`);
 };
 
+const formatIndiaTimeLabel = (isoValue: string) => {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date(isoValue));
+};
+
 const generateTimeSlots = (date: string, durationMin: number): { start: string; end: string }[] => {
   const slots: { start: string; end: string }[] = [];
   const startTime = toIndiaDateTime(date, env.START_TIME);
@@ -339,7 +348,7 @@ export const getAvailableSlotsForDay = async (date: string, serviceId?: string) 
   return generateTimeSlots(date, durationMin).map((slot) => ({
     start: slot.start,
     end: slot.end,
-    label: dayjs(slot.start).format('hh:mm A'),
+    label: formatIndiaTimeLabel(slot.start),
     booked: isBusyInterval(new Date(slot.start), new Date(slot.end), busyIntervals),
   }));
 };
