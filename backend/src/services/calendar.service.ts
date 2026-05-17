@@ -3,8 +3,10 @@ import dayjs from 'dayjs';
 import { BookingStatus } from '@prisma/client';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
+import { defaultServices } from '../data/default-services';
 
 const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
+const INDIA_TIME_OFFSET = '+05:30';
 
 type BusyInterval = {
   start: Date;
@@ -104,10 +106,15 @@ const getCalendarClient = () => {
   return google.calendar({ version: 'v3', auth: oAuthClient });
 };
 
+const toIndiaDateTime = (date: string, time: string) => {
+  const normalizedTime = time.length === 5 ? `${time}:00` : time;
+  return dayjs(`${date}T${normalizedTime}${INDIA_TIME_OFFSET}`);
+};
+
 const generateTimeSlots = (date: string, durationMin: number): { start: string; end: string }[] => {
   const slots: { start: string; end: string }[] = [];
-  const startTime = dayjs(`${date}T${env.START_TIME}`);
-  const endTime = dayjs(`${date}T${env.END_TIME}`);
+  const startTime = toIndiaDateTime(date, env.START_TIME);
+  const endTime = toIndiaDateTime(date, env.END_TIME);
 
   let cursor = startTime;
 
@@ -134,16 +141,27 @@ const getServiceDurationMin = async (serviceId?: string) => {
     return env.APPOINTMENT_DURATION;
   }
 
-  const service = await prisma.service.findUnique({
-    where: { id: serviceId },
-    select: { durationMin: true },
-  });
+  try {
+    const service = await prisma.service.findFirst({
+      where: {
+        OR: [
+          { id: serviceId },
+          { slug: serviceId },
+        ],
+      },
+      select: { durationMin: true },
+    });
 
-  if (!service) {
-    throw new Error('Service not found');
+    if (service) {
+      return service.durationMin;
+    }
+  } catch {
+    // Fall through to the static catalog so booking stays usable if the DB is unavailable.
   }
 
-  return service.durationMin;
+  const fallbackService = defaultServices.find((service) => service.slug === serviceId);
+
+  return fallbackService?.durationMin || env.APPOINTMENT_DURATION;
 };
 
 const getBookedEvents = async (timeMin: string, timeMax: string) => {
@@ -174,27 +192,31 @@ const getDatabaseBusyIntervals = async (
   rangeEnd: Date,
   excludeBookingId?: string
 ): Promise<BusyInterval[]> => {
-  const bookings = await prisma.booking.findMany({
-    where: {
-      status: { in: ACTIVE_BOOKING_STATUSES },
-      bookingDateTime: {
-        gte: rangeStart,
-        lt: rangeEnd,
+  try {
+    const bookings = await prisma.booking.findMany({
+      where: {
+        status: { in: ACTIVE_BOOKING_STATUSES },
+        bookingDateTime: {
+          gte: rangeStart,
+          lt: rangeEnd,
+        },
+        ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
       },
-      ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
-    },
-    include: {
-      service: {
-        select: { durationMin: true },
+      include: {
+        service: {
+          select: { durationMin: true },
+        },
       },
-    },
-  }) as Array<{ bookingDateTime: Date; service: { durationMin: number } }>;
+    }) as Array<{ bookingDateTime: Date; service: { durationMin: number } }>;
 
-  return bookings.map((booking) => ({
-    start: booking.bookingDateTime,
-    end: new Date(booking.bookingDateTime.getTime() + booking.service.durationMin * 60_000),
-    source: 'database',
-  }));
+    return bookings.map((booking) => ({
+      start: booking.bookingDateTime,
+      end: new Date(booking.bookingDateTime.getTime() + booking.service.durationMin * 60_000),
+      source: 'database',
+    }));
+  } catch {
+    return [];
+  }
 };
 
 const getGoogleBusyIntervals = async (rangeStart: Date, rangeEnd: Date): Promise<BusyInterval[]> => {
@@ -286,10 +308,9 @@ export const getMonthlyAvailability = async (year: number, month: number, servic
   let cursor = startDate;
 
   while (!cursor.isAfter(endDate)) {
-    const isWeekend = cursor.day() === 0 || cursor.day() === 6;
     const isPast = cursor.isBefore(dayjs(), 'day');
     const dayKey = cursor.format('YYYY-MM-DD');
-    const hasSlots = !isWeekend && !isPast && generateTimeSlots(dayKey, durationMin).some((slot) =>
+    const hasSlots = !isPast && generateTimeSlots(dayKey, durationMin).some((slot) =>
       !isBusyInterval(new Date(slot.start), new Date(slot.end), busyIntervals)
     );
 
@@ -303,10 +324,6 @@ export const getMonthlyAvailability = async (year: number, month: number, servic
 export const getAvailableSlotsForDay = async (date: string, serviceId?: string) => {
   const day = dayjs(date);
   const durationMin = await getServiceDurationMin(serviceId);
-
-  if (day.day() === 0 || day.day() === 6) {
-    return [];
-  }
 
   if (day.isBefore(dayjs(), 'day')) {
     return [];
