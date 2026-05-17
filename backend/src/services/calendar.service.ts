@@ -308,9 +308,10 @@ export const getMonthlyAvailability = async (year: number, month: number, servic
   let cursor = startDate;
 
   while (!cursor.isAfter(endDate)) {
+    const isWeekend = cursor.day() === 0 || cursor.day() === 6;
     const isPast = cursor.isBefore(dayjs(), 'day');
     const dayKey = cursor.format('YYYY-MM-DD');
-    const hasSlots = !isPast && generateTimeSlots(dayKey, durationMin).some((slot) =>
+    const hasSlots = !isWeekend && !isPast && generateTimeSlots(dayKey, durationMin).some((slot) =>
       !isBusyInterval(new Date(slot.start), new Date(slot.end), busyIntervals)
     );
 
@@ -324,6 +325,10 @@ export const getMonthlyAvailability = async (year: number, month: number, servic
 export const getAvailableSlotsForDay = async (date: string, serviceId?: string) => {
   const day = dayjs(date);
   const durationMin = await getServiceDurationMin(serviceId);
+
+  if (day.day() === 0 || day.day() === 6) {
+    return [];
+  }
 
   if (day.isBefore(dayjs(), 'day')) {
     return [];
