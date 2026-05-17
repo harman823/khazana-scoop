@@ -89,13 +89,13 @@ function MessageDetails({ payload }: { payload?: ChatPayload }) {
         <div className="space-y-2">
           {payload.availability.map((group) => (
             <div key={group.date} className="rounded-2xl border border-[#E5BE90]/30 bg-[#FFF5EA] p-3">
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#585858]">
+              <div className="mb-2 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-wide text-[#585858] sm:text-xs">
                 <CalendarDays className="h-3.5 w-3.5 text-[#E84C3D]" />
                 {group.day}
               </div>
               <div className="flex flex-wrap gap-2">
                 {group.slots.map((slot) => (
-                  <span key={slot.start} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#585858] shadow-sm">
+                  <span key={slot.start} className="rounded-full bg-white px-3 py-1.5 text-center text-[0.68rem] font-semibold text-[#585858] shadow-sm sm:text-xs">
                     {slot.label}
                   </span>
                 ))}
@@ -109,7 +109,7 @@ function MessageDetails({ payload }: { payload?: ChatPayload }) {
         <div className="grid gap-2">
           {payload.services.map((service) => (
             <div key={service.slug} className="rounded-2xl border border-[#E5BE90]/25 bg-white p-3 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-3">
                 <h4 className="text-sm font-semibold text-[#585858]">{service.title}</h4>
                 <span className="shrink-0 rounded-full bg-[#FFF5EA] px-2.5 py-1 text-[0.68rem] font-semibold text-[#E84C3D]">
                   {formatPrice(service.price)}
@@ -183,7 +183,7 @@ export function Chatbot() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end sm:bottom-6 sm:right-6">
+    <div className="fixed inset-x-3 bottom-3 z-50 flex flex-col items-end sm:inset-x-auto sm:bottom-6 sm:right-6">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -191,19 +191,19 @@ export function Chatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className={`mb-4 w-[calc(100vw-2rem)] overflow-hidden rounded-[1.25rem] border border-[#FFF5EA] bg-white shadow-[0_18px_70px_rgba(88,88,88,0.16)] transition-all duration-300 ${
-              expanded ? "max-w-[40rem]" : "max-w-[28rem]"
+            className={`mb-3 flex max-h-[calc(100dvh-5.75rem)] w-full flex-col overflow-hidden rounded-[1.25rem] border border-[#FFF5EA] bg-white shadow-[0_18px_70px_rgba(88,88,88,0.16)] transition-all duration-300 sm:mb-4 sm:w-[calc(100vw-2rem)] sm:max-h-none ${
+              expanded ? "sm:max-w-[40rem]" : "sm:max-w-[28rem]"
             }`}
           >
-            <div className="bg-[#E84C3D] p-4 text-white">
+            <div className="shrink-0 bg-[#E84C3D] p-3.5 text-white sm:p-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 sm:h-10 sm:w-10">
                     <Bot className="h-5 w-5 text-white" />
                   </div>
-                  <div>
-                    <h3 className="font-serif text-lg font-semibold leading-tight">KosmicAlign Assistant</h3>
-                    <p className="text-xs text-white/80">Calm guidance, live services, weekday slots</p>
+                  <div className="min-w-0">
+                    <h3 className="truncate font-serif text-base font-semibold leading-tight sm:text-lg">KosmicAlign Assistant</h3>
+                    <p className="truncate text-[0.68rem] text-white/80 sm:text-xs">Calm guidance, live services, weekday slots</p>
                   </div>
                 </div>
                 <button
@@ -216,11 +216,11 @@ export function Chatbot() {
               </div>
             </div>
 
-            <div ref={scrollRef} className={`flex flex-col gap-4 overflow-y-auto bg-[#FFF5EA]/55 p-4 ${expanded ? "h-[30rem]" : "h-80"}`}>
+            <div ref={scrollRef} className={`flex min-h-0 flex-1 overscroll-contain flex-col gap-3 overflow-y-auto bg-[#FFF5EA]/55 p-3 sm:gap-4 sm:p-4 ${expanded ? "h-[48dvh] sm:h-[30rem]" : "h-[42dvh] sm:h-80"}`}>
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                  className={`max-w-[96%] rounded-2xl px-3.5 py-3 text-sm leading-relaxed shadow-sm sm:max-w-[92%] sm:px-4 ${
                     message.role === "bot"
                       ? "self-start rounded-tl-sm border border-[#E5BE90]/20 bg-white text-[#585858]"
                       : "self-end rounded-tr-sm bg-[#E84C3D] text-white"
@@ -237,14 +237,14 @@ export function Chatbot() {
               )}
             </div>
 
-            <div className="border-t border-[#E5BE90]/20 bg-white px-4 pt-4">
+            <div className="shrink-0 border-t border-[#E5BE90]/20 bg-white px-3 pt-3 sm:px-4 sm:pt-4">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {quickPrompts.map((prompt) => (
                   <button
                     key={prompt}
                     type="button"
                     onClick={() => sendMessage(prompt)}
-                    className="rounded-full bg-[#FFF5EA] px-3 py-2 text-left text-xs font-medium text-[#585858] transition-colors hover:bg-[#FDEBD0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E84C3D]/30"
+                    className="min-h-10 rounded-full bg-[#FFF5EA] px-3 py-2 text-left text-[0.68rem] font-medium leading-tight text-[#585858] transition-colors hover:bg-[#FDEBD0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E84C3D]/30 sm:text-xs"
                   >
                     {prompt}
                   </button>
@@ -253,7 +253,7 @@ export function Chatbot() {
             </div>
 
             <form
-              className="flex items-center gap-2 bg-white p-4"
+              className="flex shrink-0 items-center gap-2 bg-white p-3 sm:p-4"
               onSubmit={(event) => {
                 event.preventDefault();
                 sendMessage();
@@ -275,17 +275,17 @@ export function Chatbot() {
               </button>
             </form>
 
-            <div className="grid grid-cols-4 gap-2 bg-white px-4 pb-4">
-              <Link to="/booking" onClick={() => setIsOpen(false)} className="rounded-full bg-[#E84C3D] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#C0392B]">
+            <div className="grid shrink-0 grid-cols-4 gap-2 bg-white px-3 pb-3 sm:px-4 sm:pb-4">
+              <Link to="/booking" onClick={() => setIsOpen(false)} className="min-h-10 rounded-full bg-[#E84C3D] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#C0392B]">
                 Book
               </Link>
-              <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
+              <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="min-h-10 rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
                 <MessageCircle className="mx-auto h-3.5 w-3.5" />
               </a>
-              <a href="https://www.instagram.com/kosmicalign?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
+              <a href="https://www.instagram.com/kosmicalign?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="min-h-10 rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
                 <Instagram className="mx-auto h-3.5 w-3.5" />
               </a>
-              <a href="mailto:hello@kosmicalign.com" className="rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
+              <a href="mailto:hello@kosmicalign.com" className="min-h-10 rounded-full bg-[#FFF5EA] px-3 py-2 text-center text-xs font-semibold text-[#585858] transition-colors hover:bg-[#FDEBD0]">
                 <Mail className="mx-auto h-3.5 w-3.5" />
               </a>
             </div>
@@ -295,7 +295,7 @@ export function Chatbot() {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-[#E84C3D] text-white shadow-[0_8px_32px_rgba(232,76,61,0.4)] transition-all duration-300 hover:scale-105 hover:bg-[#C0392B] active:scale-95 sm:h-16 sm:w-16"
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#E84C3D] text-white shadow-[0_8px_32px_rgba(232,76,61,0.4)] transition-all duration-300 hover:scale-105 hover:bg-[#C0392B] active:scale-95 sm:h-16 sm:w-16"
         aria-label={isOpen ? "Close chat" : "Open chat"}
       >
         {isOpen ? <X className="h-7 w-7" /> : <Sparkles className="h-7 w-7" />}
