@@ -9,9 +9,13 @@
     "dev:frontend": "vite --host 127.0.0.1 --port 5173",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "db:generate": "python -m prisma generate",
-    "db:push": "python -m prisma db push",
-    "db:seed": "python -m backend.seed"
+    "db:generate": ".venv\\Scripts\\python.exe scripts\\prisma_cli.py generate",
+    "db:push": ".venv\\Scripts\\python.exe scripts\\prisma_cli.py db push",
+    "db:seed": ".venv\\Scripts\\python.exe -m backend.seed",
+    "db:setup": "npm run db:generate && npm run db:push && npm run db:seed",
+    "db:migrate": ".venv\\Scripts\\python.exe scripts\\prisma_cli.py migrate dev",
+    "db:deploy": ".venv\\Scripts\\python.exe scripts\\prisma_cli.py migrate deploy",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",

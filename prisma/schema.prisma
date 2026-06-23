@@ -25,6 +25,9 @@ model Product {
   updatedAt   DateTime    @updatedAt
   variants    Variant[]
   orderItems  OrderItem[]
+
+  @@index([productType, status])
+  @@index([category, status])
 }
 
 model Variant {
@@ -37,13 +40,15 @@ model Variant {
   line      String?
   isDefault Boolean  @default(false)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
 
 model Customer {
   id        String   @id
   name      String
   phone     String
-  email     String
+  email     String   @unique
   address   String
   createdAt DateTime @default(now())
   orders    Order[]
@@ -61,8 +66,12 @@ model Order {
   trackingNumber    String      @default("")
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
-  customer          Customer    @relation(fields: [customerId], references: [id])
+  customer          Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items             OrderItem[]
+
+  @@index([customerId, createdAt])
+  @@index([paymentStatus, createdAt])
+  @@index([fulfilmentStatus, createdAt])
 }
 
 model OrderItem {
@@ -77,7 +86,10 @@ model OrderItem {
   price           Int
   preferencesJson String   @default("{}")
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product         Product  @relation(fields: [productId], references: [id])
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model InventoryItem {
@@ -91,4 +103,7 @@ model InventoryItem {
   status     String   @default("active")
   image      String?
   updatedAt  DateTime @updatedAt
+
+  @@index([category, status])
+  @@index([stock])
 }

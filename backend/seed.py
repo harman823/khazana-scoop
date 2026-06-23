@@ -58,88 +58,90 @@ INVENTORY = [
 
 async def main() -> None:
     await db.connect()
+    try:
+        async with db.tx() as transaction:
+            for source_product in PRODUCTS:
+                product = {**source_product}
+                variants = product.pop("variants")
+                await transaction.product.upsert(
+                    where={"id": product["id"]},
+                    data={
+                        "create": {**product, "variants": {"create": variants}},
+                        "update": product,
+                    },
+                )
+                for variant in variants:
+                    await transaction.variant.upsert(
+                        where={"id": variant["id"]},
+                        data={
+                            "create": {**variant, "productId": product["id"]},
+                            "update": variant,
+                        },
+                    )
 
-    for product in PRODUCTS:
-        variants = product.pop("variants")
-        await db.product.upsert(
-            where={"id": product["id"]},
-            data={
-                "create": {**product, "variants": {"create": variants}},
-                "update": product,
-            },
-        )
-        for variant in variants:
-            await db.variant.upsert(
-                where={"id": variant["id"]},
+            for item in INDIVIDUALS:
+                await transaction.product.upsert(
+                    where={"id": item["id"]},
+                    data={
+                        "create": {**item, "productType": "individual"},
+                        "update": item,
+                    },
+                )
+
+            for item in INVENTORY:
+                await transaction.inventoryitem.upsert(
+                    where={"id": item["id"]},
+                    data={"create": item, "update": item},
+                )
+
+            customer = await transaction.customer.upsert(
+                where={"email": "demo@example.com"},
                 data={
-                    "create": {**variant, "productId": product["id"]},
-                    "update": variant,
+                    "create": {
+                        "id": "demo-customer",
+                        "name": "Demo Customer",
+                        "phone": "+91 90000 00000",
+                        "email": "demo@example.com",
+                        "address": "Demo address, Jaipur 302001",
+                    },
+                    "update": {},
                 },
             )
 
-    for item in INDIVIDUALS:
-        await db.product.upsert(
-            where={"id": item["id"]},
-            data={
-                "create": {**item, "productType": "individual"},
-                "update": item,
-            },
-        )
-
-    for item in INVENTORY:
-        await db.inventoryitem.upsert(
-            where={"id": item["id"]},
-            data={"create": item, "update": item},
-        )
-
-    customer = await db.customer.upsert(
-        where={"id": "demo-customer"},
-        data={
-            "create": {
-                "id": "demo-customer",
-                "name": "Demo Customer",
-                "phone": "+91 90000 00000",
-                "email": "demo@example.com",
-                "address": "Demo address, Jaipur 302001",
-            },
-            "update": {},
-        },
-    )
-
-    await db.order.upsert(
-        where={"id": "KS-DEMO-1024"},
-        data={
-            "create": {
-                "id": "KS-DEMO-1024",
-                "customerId": customer.id,
-                "orderNote": "No earrings, prefer pink stationery.",
-                "paymentStatus": "paid",
-                "fulfilmentStatus": "packed",
-                "subtotal": 999,
-                "shippingFee": 0,
-                "total": 999,
-                "trackingNumber": "SHIP123456",
-                "items": {
-                    "create": [
-                        {
-                            "id": "KS-DEMO-1024-1",
-                            "productId": "mystery-scoop",
-                            "productName": "Mystery Scoop",
-                            "variantId": "medium",
-                            "variantName": "Medium Scoop",
-                            "itemCount": "12-15 products",
-                            "quantity": 1,
-                            "price": 999,
-                            "preferencesJson": "{}",
-                        }
-                    ]
+            await transaction.order.upsert(
+                where={"id": "KS-DEMO-1024"},
+                data={
+                    "create": {
+                        "id": "KS-DEMO-1024",
+                        "customerId": customer.id,
+                        "orderNote": "No earrings, prefer pink stationery.",
+                        "paymentStatus": "paid",
+                        "fulfilmentStatus": "packed",
+                        "subtotal": 999,
+                        "shippingFee": 0,
+                        "total": 999,
+                        "trackingNumber": "SHIP123456",
+                        "items": {
+                            "create": [
+                                {
+                                    "id": "KS-DEMO-1024-1",
+                                    "productId": "mystery-scoop",
+                                    "productName": "Mystery Scoop",
+                                    "variantId": "medium",
+                                    "variantName": "Medium Scoop",
+                                    "itemCount": "12-15 products",
+                                    "quantity": 1,
+                                    "price": 999,
+                                    "preferencesJson": "{}",
+                                }
+                            ]
+                        },
+                    },
+                    "update": {},
                 },
-            },
-            "update": {},
-        },
-    )
-
-    await db.disconnect()
+            )
+    finally:
+        await db.disconnect()
 
 
 if __name__ == "__main__":

@@ -8,15 +8,16 @@ from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from dotenv import load_dotenv
+from prisma.errors import RecordNotFoundError, UniqueViolationError
 
 try:
-    from backend.db import connect_db, db, disconnect_db
+    from backend.db import db, lifespan
 except ModuleNotFoundError:
-    from db import connect_db, db, disconnect_db
+    from db import db, lifespan
 
 load_dotenv()
 
-app = FastAPI(title="KhazanaScoop MVP API", version="0.2.0")
+app = FastAPI(title="KhazanaScoop MVP API", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,7 +54,7 @@ class ProductOut(BaseModel):
     icon: str | None = None
     color: str | None = None
     status: str = "active"
-    variants: list[VariantOut] = []
+    variants: list[VariantOut] = Field(default_factory=list)
 
 
 class ProductUpsertIn(BaseModel):
@@ -74,7 +75,7 @@ class CartItemIn(BaseModel):
     product_id: str
     variant_id: str
     quantity: int = Field(ge=1)
-    preferences: dict[str, str] = {}
+    preferences: dict[str, str] = Field(default_factory=dict)
 
 
 class CustomerIn(BaseModel):
@@ -106,7 +107,7 @@ class OrderItemOut(BaseModel):
     item_count: str | None = None
     quantity: int
     price: int
-    preferences: dict[str, str] = {}
+    preferences: dict[str, str] = Field(default_factory=dict)
 
 
 class CustomerOut(BaseModel):
@@ -163,16 +164,6 @@ class AdminStatsOut(BaseModel):
     products: int
     inventory_units: int
     low_stock_items: int
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    await connect_db()
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    await disconnect_db()
 
 
 def require_admin(authorization: str = Header(default="")) -> str:
@@ -264,8 +255,8 @@ def inventory_to_out(item) -> InventoryItemOut:
     )
 
 
-async def resolve_order_item(item: CartItemIn) -> dict:
-    product = await db.product.find_unique(where={"id": item.product_id}, include={"variants": True})
+async def resolve_order_item(client, item: CartItemIn) -> dict:
+    product = await client.product.find_unique(where={"id": item.product_id}, include={"variants": True})
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -296,8 +287,14 @@ async def resolve_order_item(item: CartItemIn) -> dict:
 
 
 @app.get("/api/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "database": "prisma"}
+async def health() -> dict[str, str | bool]:
+    await db.product.count()
+    return {
+        "status": "ok",
+        "database": "connected",
+        "orm": "prisma",
+        "connected": db.is_connected(),
+    }
 
 
 @app.get("/api/products", response_model=list[ProductOut])
@@ -324,33 +321,42 @@ async def create_checkout(payload: CheckoutIn) -> OrderOut:
     if not payload.items:
         raise HTTPException(status_code=400, detail="Cart is empty")
 
-    resolved_items = [await resolve_order_item(item) for item in payload.items]
-    subtotal = sum(item["price"] * item["quantity"] for item in resolved_items)
-    shipping_fee = 0 if subtotal >= 499 else 49
+    async with db.tx() as transaction:
+        resolved_items = [await resolve_order_item(transaction, item) for item in payload.items]
+        subtotal = sum(item["price"] * item["quantity"] for item in resolved_items)
+        shipping_fee = 0 if subtotal >= 499 else 49
 
-    customer_id = uuid4().hex
-    order = await db.order.create(
-        data={
-            "id": f"KS-{uuid4().hex[:8].upper()}",
-            "customer": {
+        customer = await transaction.customer.upsert(
+            where={"email": payload.customer.email},
+            data={
                 "create": {
-                    "id": customer_id,
+                    "id": uuid4().hex,
                     "name": payload.customer.name,
                     "phone": payload.customer.phone,
                     "email": payload.customer.email,
                     "address": payload.customer.address,
-                }
+                },
+                "update": {
+                    "name": payload.customer.name,
+                    "phone": payload.customer.phone,
+                    "address": payload.customer.address,
+                },
             },
-            "orderNote": payload.order_note,
-            "paymentStatus": "paid",
-            "fulfilmentStatus": "unfulfilled",
-            "subtotal": subtotal,
-            "shippingFee": shipping_fee,
-            "total": subtotal + shipping_fee,
-            "items": {"create": resolved_items},
-        },
-        include={"customer": True, "items": True},
-    )
+        )
+        order = await transaction.order.create(
+            data={
+                "id": f"KS-{uuid4().hex[:8].upper()}",
+                "customerId": customer.id,
+                "orderNote": payload.order_note,
+                "paymentStatus": "paid",
+                "fulfilmentStatus": "unfulfilled",
+                "subtotal": subtotal,
+                "shippingFee": shipping_fee,
+                "total": subtotal + shipping_fee,
+                "items": {"create": resolved_items},
+            },
+            include={"customer": True, "items": True},
+        )
     return order_to_out(order)
 
 
@@ -392,7 +398,12 @@ async def update_order(order_id: str, patch: OrderPatch, _: str = Depends(requir
         data["fulfilmentStatus"] = patch.fulfilment_status
     if patch.tracking_number is not None:
         data["trackingNumber"] = patch.tracking_number
-    order = await db.order.update(where={"id": order_id}, data=data, include={"customer": True, "items": True})
+    if not data:
+        raise HTTPException(status_code=400, detail="No order fields supplied")
+    try:
+        order = await db.order.update(where={"id": order_id}, data=data, include={"customer": True, "items": True})
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     return order_to_out(order)
@@ -415,7 +426,12 @@ async def update_inventory(item_id: str, patch: InventoryPatch, _: str = Depends
         data["sellPrice"] = patch.sell_price
     if patch.status is not None:
         data["status"] = patch.status
-    item = await db.inventoryitem.update(where={"id": item_id}, data=data)
+    if not data:
+        raise HTTPException(status_code=400, detail="No inventory fields supplied")
+    try:
+        item = await db.inventoryitem.update(where={"id": item_id}, data=data)
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
     if item is None:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     return inventory_to_out(item)
@@ -429,23 +445,26 @@ async def get_admin_products(_: str = Depends(require_admin)) -> list[ProductOut
 
 @app.post("/api/admin/products", response_model=ProductOut, status_code=201)
 async def create_product(payload: ProductUpsertIn, _: str = Depends(require_admin)) -> ProductOut:
-    product = await db.product.create(
-        data={
-            "id": uuid4().hex,
-            "name": payload.name,
-            "slug": payload.slug,
-            "productType": payload.product_type,
-            "category": payload.category,
-            "description": payload.description,
-            "price": payload.price,
-            "image": payload.image,
-            "badge": payload.badge,
-            "icon": payload.icon,
-            "color": payload.color,
-            "status": payload.status,
-        },
-        include={"variants": True},
-    )
+    try:
+        product = await db.product.create(
+            data={
+                "id": uuid4().hex,
+                "name": payload.name,
+                "slug": payload.slug,
+                "productType": payload.product_type,
+                "category": payload.category,
+                "description": payload.description,
+                "price": payload.price,
+                "image": payload.image,
+                "badge": payload.badge,
+                "icon": payload.icon,
+                "color": payload.color,
+                "status": payload.status,
+            },
+            include={"variants": True},
+        )
+    except UniqueViolationError:
+        raise HTTPException(status_code=409, detail="A product with this slug already exists")
     return product_to_out(product)
 
 

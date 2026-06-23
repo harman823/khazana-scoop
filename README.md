@@ -15,11 +15,22 @@ python -m venv .venv
 Create and seed the Prisma SQLite database:
 
 ```powershell
-$env:Path = "$PWD\.venv\Scripts;$env:Path"
-.\.venv\Scripts\python.exe -m prisma generate
-npx prisma db push
-.\.venv\Scripts\python.exe -m backend.seed
+npm run db:setup
 ```
+
+Inspect and edit local records with Prisma Studio:
+
+```powershell
+npm run db:studio
+```
+
+After changing `prisma/schema.prisma`, create a migration with:
+
+```powershell
+npm run db:migrate -- --name describe_your_change
+```
+
+Apply committed migrations in a deployed environment with `npm run db:deploy`.
 
 Start the backend:
 
@@ -63,6 +74,8 @@ npm run build
 ## MVP Notes
 
 - Products, variants, customers, orders, and inventory are stored in SQLite through Prisma ORM.
+- FastAPI opens and closes Prisma through its application lifespan.
+- Checkout and seed writes run in database transactions; returning customers are matched by email.
 - Checkout simulates prepaid verification and creates a paid order for admin fulfilment.
 - Admin has protected routes for overview, orders, inventory, products, customers, and analytics.
 - Admin can update order status, tracking number, inventory stock/cost/sell price/status, and create products.
