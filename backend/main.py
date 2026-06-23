@@ -9,7 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from dotenv import load_dotenv
 
-from backend.db import connect_db, db, disconnect_db
+try:
+    from backend.db import connect_db, db, disconnect_db
+except ModuleNotFoundError:
+    from db import connect_db, db, disconnect_db
 
 load_dotenv()
 

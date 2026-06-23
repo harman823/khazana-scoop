@@ -13,7 +13,7 @@ import {
   updateInventory,
   updateOrder,
 } from "./api";
-import type { AdminStats, CartItem, Customer, InventoryItem, Order, Product, Variant } from "./types";
+import type { AdminStats, CartItem, Customer, InventoryItem, Order, Product, ProductType, Variant } from "./types";
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const emptyCustomer: Customer = { name: "", phone: "", email: "", address: "" };
@@ -298,7 +298,7 @@ function AdminInventory() {
 
 function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [form, setForm] = useState({ name: "", slug: "", product_type: "individual", category: "", description: "", price: 0, badge: "", icon: "✦", color: "#E4FFFA", status: "active" });
+  const [form, setForm] = useState<{ name: string; slug: string; product_type: ProductType; category: string; description: string; price: number; badge: string; icon: string; color: string; status: string }>({ name: "", slug: "", product_type: "individual", category: "", description: "", price: 0, badge: "", icon: "✦", color: "#E4FFFA", status: "active" });
   useEffect(() => { getAdminProducts().then(setProducts); }, []);
   async function submit(event: FormEvent) {
     event.preventDefault();
