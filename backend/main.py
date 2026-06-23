@@ -13,7 +13,7 @@ from backend.db import connect_db, db, disconnect_db
 
 load_dotenv()
 
-app = FastAPI(title="Khazana Scoop MVP API", version="0.2.0")
+app = FastAPI(title="KhazanaScoop MVP API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,

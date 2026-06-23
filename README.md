@@ -1,6 +1,6 @@
-# Khazana Scoop MVP
+# KhazanaScoop MVP
 
-React TypeScript storefront with a Python FastAPI backend and Prisma ORM for the Khazana Scoop ecommerce MVP.
+React TypeScript storefront with a Python FastAPI backend and Prisma ORM for the KhazanaScoop ecommerce MVP.
 
 ## Run Locally
 

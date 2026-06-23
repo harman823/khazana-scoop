@@ -1,4 +1,4 @@
-# workflow.md — Ecommerce Workflow for Khazana Scoop
+# workflow.md — Ecommerce Workflow for KhazanaScoop
 
 ## 1. Product Vision
 

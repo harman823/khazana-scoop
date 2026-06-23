@@ -1,16 +1,16 @@
-# product-requirements.md — Product Requirements Document for Khazana Scoop Ecommerce Website
+# product-requirements.md — Product Requirements Document for KhazanaScoop Ecommerce Website
 
 ## 1. Product Name
 
-Khazana Scoop Ecommerce Website
+KhazanaScoop Ecommerce Website
 
-> Replace “Khazana Scoop” with the final brand name if needed.
+> Final brand name: KhazanaScoop.
 
 ---
 
 ## 2. Product Summary
 
-Khazana Scoop is a mobile-first ecommerce website for selling cute mystery scoop boxes, build-your-own boxes, and individual cute products. The website should reduce dependence on Instagram DMs by clearly explaining prices, item counts, variants, policies, and order notes.
+KhazanaScoop is a mobile-first ecommerce website for selling cute mystery scoop boxes, build-your-own boxes, and individual cute products. The website should reduce dependence on Instagram DMs by clearly explaining prices, item counts, variants, policies, and order notes.
 
 The core buying experience should be simple:
 

@@ -1,8 +1,8 @@
-# mvp-design-document.md — MVP Design Document for Khazana Scoop Ecommerce Website
+# mvp-design-document.md — MVP Design Document for KhazanaScoop Ecommerce Website
 
 ## 1. Overview
 
-Khazana Scoop is a playful-minimal ecommerce website for selling mystery scoop boxes, build-your-own boxes, and cute individual products. The MVP should focus on mobile-first shopping, clear product explanation, simple checkout, and easy order management for the business owner.
+KhazanaScoop is a playful-minimal ecommerce website for selling mystery scoop boxes, build-your-own boxes, and cute individual products. The MVP should focus on mobile-first shopping, clear product explanation, simple checkout, and easy order management for the business owner.
 
 The design is inspired by:
 

@@ -122,7 +122,7 @@ function Storefront() {
       <div className="announce">Free shipping on prepaid orders • Special notes accepted • Ships in 2-5 working days</div>
       <header className="site-header">
         <button className="icon-button mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><span /><span /><span /></button>
-        <a className="brand" href="#home" aria-label="Khazana Scoop home"><span className="brand-mark">KS</span><span>Khazana Scoop</span></a>
+        <a className="brand" href="#home" aria-label="KhazanaScoop home"><span className="brand-mark">KS</span><span>KhazanaScoop</span></a>
         <nav className={`nav ${menuOpen ? "open" : ""}`}>
           <a href="#mystery">Mystery Scoops</a><a href="#build">Build Your Scoop</a><a href="#collection">Cute Essentials</a><Link to="/admin">Admin</Link>
         </nav>
@@ -181,7 +181,7 @@ function Storefront() {
 
       <CartDrawer isOpen={isCartOpen} cart={cart} orderNote={orderNote} subtotal={subtotal} shipping={shipping} total={total} onClose={() => setCartOpen(false)} onNote={setOrderNote} onQuantity={updateQuantity} onCheckout={() => cart.length ? setCheckoutOpen(true) : setToast("Add an item before checkout")} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setCheckoutOpen(false)} onSubmit={(customer) => void submitCheckout(customer)} />
-      <footer className="footer"><div><strong>Khazana Scoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><a href="#mystery">Mystery Scoops</a><a href="#build">Build Your Scoop</a><a href="#collection">Cute Essentials</a></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
+      <footer className="footer"><div><strong>KhazanaScoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><a href="#mystery">Mystery Scoops</a><a href="#build">Build Your Scoop</a><a href="#collection">Cute Essentials</a></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
       <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
     </>
   );
@@ -206,7 +206,7 @@ function AdminLogin() {
   return (
     <main className="admin-login">
       <form className="checkout-card" onSubmit={submit}>
-        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>Khazana Scoop</span></Link>
+        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>KhazanaScoop</span></Link>
         <h1>Admin login</h1>
         <p>Enter the store owner password to manage paid orders, stock, products, customers, and analytics.</p>
         <label>Password <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" autoFocus /></label>
@@ -224,7 +224,7 @@ function AdminShell() {
   return (
     <div className="admin-app">
       <aside className="admin-sidebar">
-        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>Khazana Scoop</span></Link>
+        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>KhazanaScoop</span></Link>
         <nav>
           <NavLink end to="/admin">Overview</NavLink>
           <NavLink to="/admin/orders">Orders</NavLink>
