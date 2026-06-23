@@ -21,6 +21,20 @@ export function getProducts() {
   return request<Product[]>("/api/products").catch(() => demoProducts);
 }
 
+export function getProduct(slug: string) {
+  return request<Product>(`/api/products/${encodeURIComponent(slug)}`).catch(() => {
+    const product = demoProducts.find((entry) => entry.slug === slug);
+    if (!product) throw new Error("Product not found");
+    return product;
+  });
+}
+
+export function getMyOrders(email: string) {
+  return request<Order[]>(`/api/my-orders?email=${encodeURIComponent(email)}`).catch(() =>
+    readDemoOrders().filter((order) => order.customer.email.toLowerCase() === email.toLowerCase()),
+  );
+}
+
 export function createCheckout(customer: Customer, items: CartItem[], orderNote: string) {
   return request<Order>("/api/checkout", {
     method: "POST",

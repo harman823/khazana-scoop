@@ -14,6 +14,17 @@ import {
   updateOrder,
 } from "./api";
 import type { AdminStats, CartItem, Customer, InventoryItem, Order, Product, ProductType, Variant } from "./types";
+import {
+  AboutPage,
+  CartPage,
+  CatalogPage,
+  ContactPage,
+  CustomerOrdersPage,
+  CustomerProfilePage,
+  FaqPage,
+  PolicyPage,
+  ProductDetailPage,
+} from "./StorePages";
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const emptyCustomer: Customer = { name: "", phone: "", email: "", address: "" };
@@ -23,6 +34,18 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Storefront />} />
+        <Route path="/shop" element={<CatalogPage />} />
+        <Route path="/products/:slug" element={<ProductDetailPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/my-orders" element={<CustomerOrdersPage />} />
+        <Route path="/profile" element={<CustomerProfilePage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/faq" element={<FaqPage />} />
+        <Route path="/shipping" element={<PolicyPage kind="shipping" />} />
+        <Route path="/returns" element={<PolicyPage kind="returns" />} />
+        <Route path="/privacy" element={<PolicyPage kind="privacy" />} />
+        <Route path="/terms" element={<PolicyPage kind="terms" />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminShell />}>
           <Route index element={<AdminOverview />} />
@@ -124,7 +147,7 @@ function Storefront() {
         <button className="icon-button mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><span /><span /><span /></button>
         <a className="brand" href="#home" aria-label="KhazanaScoop home"><span className="brand-mark">KS</span><span>KhazanaScoop</span></a>
         <nav className={`nav ${menuOpen ? "open" : ""}`}>
-          <a href="#mystery">Mystery Scoops</a><a href="#build">Build Your Scoop</a><a href="#collection">Cute Essentials</a><Link to="/admin">Admin</Link>
+          <Link to="/shop">Shop All</Link><a href="#mystery">Mystery Scoops</a><a href="#build">Build Your Scoop</a><Link to="/about">About</Link><Link to="/profile">Account</Link>
         </nav>
         <button className="cart-button" onClick={() => setCartOpen(true)} aria-label="Open cart">Cart <span>{cartCount}</span></button>
       </header>
@@ -362,7 +385,7 @@ function InventorySummary({ item }: { item: InventoryItem }) {
 }
 
 function ProductCard({ product, onAdd }: { product: Product; onAdd: () => void }) {
-  return <article className="product-card"><div className="product-art" style={{ "--art-bg": product.color ?? "#E4FFFA" } as CSSProperties} aria-hidden="true">{product.icon}</div><h3>{product.name}</h3><p>{product.category}</p><div className="row"><strong>{money.format(product.price)}</strong><button className="button primary" onClick={onAdd}>Add</button></div></article>;
+  return <article className="product-card"><Link to={`/products/${product.slug}`} className="product-card-link"><div className="product-art" style={{ "--art-bg": product.color ?? "#E4FFFA" } as CSSProperties} aria-hidden="true">{product.image ? <img src={product.image} alt="" /> : product.icon}</div><h3>{product.name}</h3><p>{product.category}</p></Link><div className="row"><strong>{money.format(product.price)}</strong><button className="button primary" onClick={onAdd}>Add</button></div></article>;
 }
 
 function VariantGrid({ variants, selectedId, onSelect }: { variants: Variant[]; selectedId: string; onSelect: (id: string) => void }) {

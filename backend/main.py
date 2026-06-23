@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from dotenv import load_dotenv
@@ -358,6 +358,19 @@ async def create_checkout(payload: CheckoutIn) -> OrderOut:
             include={"customer": True, "items": True},
         )
     return order_to_out(order)
+
+
+@app.get("/api/my-orders", response_model=list[OrderOut])
+async def get_my_orders(email: EmailStr = Query()) -> list[OrderOut]:
+    customer = await db.customer.find_unique(where={"email": str(email)})
+    if customer is None:
+        return []
+    orders = await db.order.find_many(
+        where={"customerId": customer.id},
+        include={"customer": True, "items": True},
+        order={"createdAt": "desc"},
+    )
+    return [order_to_out(order) for order in orders]
 
 
 @app.post("/api/admin/login", response_model=TokenOut)
