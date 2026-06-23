@@ -1,0 +1,94 @@
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String      @id
+  name        String
+  slug        String      @unique
+  productType String
+  category    String
+  description String
+  price       Int
+  image       String?
+  badge       String?
+  icon        String?
+  color       String?
+  status      String      @default("active")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  variants    Variant[]
+  orderItems  OrderItem[]
+}
+
+model Variant {
+  id        String   @id
+  productId String
+  name      String
+  itemCount String
+  price     Int
+  badge     String?
+  line      String?
+  isDefault Boolean  @default(false)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id        String   @id
+  name      String
+  phone     String
+  email     String
+  address   String
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model Order {
+  id                String      @id
+  customerId        String
+  orderNote         String      @default("")
+  paymentStatus     String      @default("paid")
+  fulfilmentStatus  String      @default("unfulfilled")
+  subtotal          Int
+  shippingFee       Int
+  total             Int
+  trackingNumber    String      @default("")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  customer          Customer    @relation(fields: [customerId], references: [id])
+  items             OrderItem[]
+}
+
+model OrderItem {
+  id              String   @id
+  orderId         String
+  productId       String
+  productName     String
+  variantId       String
+  variantName     String
+  itemCount       String?
+  quantity        Int
+  price           Int
+  preferencesJson String   @default("{}")
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product  @relation(fields: [productId], references: [id])
+}
+
+model InventoryItem {
+  id         String   @id
+  name       String
+  category   String
+  costPrice  Int      @default(0)
+  sellPrice  Int      @default(0)
+  stock      Int
+  lowStockAt Int      @default(10)
+  status     String   @default("active")
+  image      String?
+  updatedAt  DateTime @updatedAt
+}
