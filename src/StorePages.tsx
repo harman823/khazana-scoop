@@ -23,6 +23,7 @@ const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR
 const CART_KEY = "khazanascoopCustomerCart";
 const PROFILE_KEY = "khazanascoopCustomerProfile";
 const WISHLIST_KEY = "khazanascoopWishlist";
+const byoCategoryOptions = ["Stationery", "Hair Accessories", "Keychains & Charms", "Beauty Minis", "Cute Pens", "Pocket Mirrors", "Stickers & Notes", "Surprise Gifts"];
 const spritePositions: Record<string, string> = {
   scrunchie: "0% 0%",
   pen: "33.333% 0%",
@@ -48,10 +49,10 @@ function writeCart(cart: CartItem[]) {
   window.dispatchEvent(new Event("khazana-cart"));
 }
 
-function addProduct(product: Product, variant?: Variant) {
+function addProduct(product: Product, variant?: Variant, preferences: Record<string, string> = {}) {
   const selected = variant ?? product.variants[0];
   const variantId = selected?.id ?? "standard";
-  const key = `${product.id}:${variantId}`;
+  const key = `${product.id}:${variantId}:${JSON.stringify(preferences)}`;
   const cart = readCart();
   const existing = cart.find((item) => item.localId === key);
   if (existing) existing.quantity += 1;
@@ -64,7 +65,7 @@ function addProduct(product: Product, variant?: Variant) {
     item_count: selected?.item_count,
     quantity: 1,
     price: selected?.price ?? product.price,
-    preferences: {},
+    preferences,
   });
   writeCart(cart);
 }
@@ -243,11 +244,13 @@ export function ProductDetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", body: "" });
   const [reviewMessage, setReviewMessage] = useState("");
+  const [byoPreferences, setByoPreferences] = useState({ colour: "Pastel mix", occasion: "Self-care", loved: ["Stationery", "Hair Accessories"], avoid: ["Earrings"] });
   useEffect(() => {
     void Promise.all([getProduct(slug), getProducts()]).then(([current, all]) => {
       setProduct(current);
       setSelectedId(current.variants.find((variant) => variant.is_default)?.id ?? current.variants[0]?.id ?? "");
       setRelated(all.filter((item) => item.id !== current.id && item.category === current.category).slice(0, 4));
+      setByoPreferences({ colour: "Pastel mix", occasion: "Self-care", loved: ["Stationery", "Hair Accessories"], avoid: ["Earrings"] });
       void getReviews(current.id).then(setReviews);
     });
   }, [slug]);
@@ -255,8 +258,22 @@ export function ProductDetailPage() {
   const currentProduct = product;
   const selected = currentProduct.variants.find((variant) => variant.id === selectedId);
   const price = selected?.price ?? currentProduct.price;
+  const isBuildYourOwn = currentProduct.product_type === "build_your_own";
+  const byoPreferencePayload: Record<string, string> = isBuildYourOwn ? {
+    colour: byoPreferences.colour,
+    loved: byoPreferences.loved.join(", "),
+    avoid: byoPreferences.avoid.length ? byoPreferences.avoid.join(", ") : "None",
+    occasion: byoPreferences.occasion,
+  } : {};
+  function toggleByoPreference(group: "loved" | "avoid", value: string) {
+    setByoPreferences((current) => {
+      const values = current[group];
+      const nextValues = values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+      return { ...current, [group]: nextValues };
+    });
+  }
   function add() {
-    for (let index = 0; index < quantity; index += 1) addProduct(currentProduct, selected);
+    for (let index = 0; index < quantity; index += 1) addProduct(currentProduct, selected, byoPreferencePayload);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   }
@@ -286,6 +303,7 @@ export function ProductDetailPage() {
           <p className="stock-line">In stock and ready to pack</p><p className="detail-description">{currentProduct.description}</p>
           {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}</button>)}</div> : null}
           {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.min_items === selected.max_items ? `${selected.min_items} core items` : `${selected.min_items}-${selected.max_items} core items`} + {selected.surprise_gift_count} surprise {selected.surprise_gift_count === 1 ? "gift" : "gifts"}.</p></div> : null}
+          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="preference-select-row"><label>Colour mood<select value={byoPreferences.colour} onChange={(event) => setByoPreferences((current) => ({ ...current, colour: event.target.value }))}><option>Pastel mix</option><option>Pink and cute</option><option>Blue and mint</option><option>Lavender</option><option>Neutral surprise</option></select></label><label>Occasion<select value={byoPreferences.occasion} onChange={(event) => setByoPreferences((current) => ({ ...current, occasion: event.target.value }))}><option>Self-care</option><option>Birthday</option><option>Gifting</option><option>School or college</option><option>Just because</option></select></label></div><fieldset><legend>Loved categories</legend>{byoCategoryOptions.map((item) => <label key={item}><input type="checkbox" checked={byoPreferences.loved.includes(item)} onChange={() => toggleByoPreference("loved", item)} /> {item}</label>)}</fieldset><fieldset><legend>Avoid categories</legend>{["Earrings", "Keychains & Charms", "Hair Accessories", "Beauty Minis", "Cute Pens", "Pocket Mirrors"].map((item) => <label key={item}><input type="checkbox" checked={byoPreferences.avoid.includes(item)} onChange={() => toggleByoPreference("avoid", item)} /> {item}</label>)}</fieldset></div> : null}
           <div className="purchase-row"><div className="quantity-stepper"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus /></button><strong>{quantity}</strong><button onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus /></button></div><button className="add-cart-primary" onClick={add}>{added ? "Added to cart" : "Add to cart"}</button></div>
           <Link className="buy-now" to="/cart" onClick={add}>Buy now</Link>
           <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-5 working days across India.</p></div></div>

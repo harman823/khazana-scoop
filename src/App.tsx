@@ -66,8 +66,6 @@ function Storefront() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderNote, setOrderNote] = useState("");
-  const [selectedMysteryId, setSelectedMysteryId] = useState("medium");
-  const [selectedByoId, setSelectedByoId] = useState("byo-medium");
   const [category, setCategory] = useState("All");
   const [sortMode, setSortMode] = useState("featured");
   const [isCartOpen, setCartOpen] = useState(false);
@@ -88,9 +86,8 @@ function Storefront() {
 
   const mysteryProduct = products.find((product) => product.product_type === "mystery_scoop");
   const byoProduct = products.find((product) => product.product_type === "build_your_own");
+  const featuredScoops = [mysteryProduct, byoProduct].filter(Boolean) as Product[];
   const individualProducts = products.filter((product) => product.product_type === "individual");
-  const selectedMystery = mysteryProduct?.variants.find((variant) => variant.id === selectedMysteryId) ?? mysteryProduct?.variants[0];
-  const selectedByo = byoProduct?.variants.find((variant) => variant.id === selectedByoId) ?? byoProduct?.variants[0];
   const categories = useMemo(() => ["All", ...Array.from(new Set(individualProducts.map((product) => product.category)))], [individualProducts]);
   const visibleProducts = useMemo(() => {
     let next = individualProducts.filter((product) => category === "All" || product.category === category);
@@ -148,7 +145,7 @@ function Storefront() {
         <button className="icon-button mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><span /><span /><span /></button>
         <a className="brand" href="#home" aria-label="KhazanaScoop home"><span className="brand-mark">KS</span><span>KhazanaScoop</span></a>
         <nav className={`nav ${menuOpen ? "open" : ""}`}>
-          <Link to="/shop">Shop All</Link><a href="#mystery">Mystery Scoops</a><a href="#build">Build Your Scoop</a><Link to="/about">About</Link><Link to="/profile">Account</Link>
+          <Link to="/shop">Shop All</Link><Link to="/shop?type=mystery_scoop">Mystery Scoops</Link><Link to="/shop?type=build_your_own">Build Your Scoop</Link><Link to="/about">About</Link><Link to="/profile">Account</Link>
         </nav>
         <button className="cart-button" onClick={() => setCartOpen(true)} aria-label="Open cart">Cart <span>{cartCount}</span></button>
       </header>
@@ -159,12 +156,12 @@ function Storefront() {
           <div className="hero-copy">
             <h1>Cute surprises, packed just for you.</h1>
             <p>Pick a mystery scoop or build your own box with adorable stationery, accessories, beauty minis, and little happy finds.</p>
-            <div className="hero-actions"><a className="button primary" href="#mystery">Shop Mystery Scoops</a><a className="button secondary" href="#build">Build My Scoop</a></div>
+            <div className="hero-actions"><Link className="button primary" to="/shop?type=mystery_scoop">Shop Mystery Scoops</Link><Link className="button secondary" to="/shop?type=build_your_own">Build My Scoop</Link></div>
             <div className="trust-row"><span>Prepaid only</span><span>Order notes</span><span>Gift-ready</span></div>
           </div>
           <div className="hero-media">
             <img src="/assets/khazana-product-hero.png" alt="Pastel mystery scoop box with cute products" />
-            <div className="mini-card"><strong>{selectedMystery?.name ?? "Medium Scoop"}</strong><span>{selectedMystery?.item_count ?? "12-15 products"} • {money.format(selectedMystery?.price ?? 999)}</span></div>
+            <div className="mini-card"><strong>{mysteryProduct?.name ?? "Mystery Scoop"}</strong><span>{mysteryProduct?.variants[1]?.item_count ?? "12 products + 2 surprise gifts"} • {money.format(mysteryProduct?.variants[1]?.price ?? 999)}</span></div>
           </div>
         </section>
 
@@ -177,20 +174,16 @@ function Storefront() {
           </div>
         </section>
 
-        {mysteryProduct && selectedMystery ? (
-          <section className="section product-shell" id="mystery">
-            <div className="product-gallery"><img src={mysteryProduct.image ?? "/assets/khazana-product-hero.png"} alt="Mystery scoop product examples" /><div className="gallery-grid"><span>Stationery</span><span>Accessories</span><span>Beauty minis</span><span>Charms</span></div></div>
-            <div className="product-info">
-              <p className="soft-label">Mystery Scoop</p><h2>{mysteryProduct.description}</h2><p>Exact products vary, but every scoop is packed for variety, value, and a little happy-unboxing moment.</p>
-              <VariantGrid variants={mysteryProduct.variants} selectedId={selectedMysteryId} onSelect={setSelectedMysteryId} />
-              <div className="price-row"><span>{money.format(selectedMystery.price)}</span><small>{selectedMystery.item_count}</small></div>
-              <div className="action-row"><button className="button primary" onClick={() => addToCart(mysteryProduct, selectedMystery)}>Add to Cart</button><button className="button secondary" onClick={() => { addToCart(mysteryProduct, selectedMystery); setCartOpen(true); }}>Buy Now</button></div>
-              <div className="info-box"><strong>Special notes accepted</strong><p>Don’t want a specific category? Mention it in order notes. We’ll try our best based on available stock.</p></div>
-            </div>
-          </section>
-        ) : null}
-
-        {byoProduct && selectedByo ? <BuildYourOwn product={byoProduct} selectedId={selectedByoId} onSelect={setSelectedByoId} onAdd={(preferences) => { addToCart(byoProduct, selectedByo, preferences); setCartOpen(true); }} /> : null}
+        <section className="section scoop-shortcuts">
+          <div className="section-heading"><h2>Scoop options live in the shop</h2><p>Keep the dashboard clean. Compare Mystery Scoop and Build Your Own from the shop filters or product pages.</p></div>
+          <div className="scoop-card-grid">
+            {featuredScoops.map((product) => {
+              const defaultVariant = product.variants.find((variant) => variant.is_default) ?? product.variants[0];
+              const typeLabel = product.product_type === "mystery_scoop" ? "Mystery Scoop" : "Build Your Own";
+              return <article className="scoop-shortcut-card" key={product.id}><p className="soft-label">{typeLabel}</p><h3>{product.name}</h3><p>{product.description}</p><strong>{money.format(defaultVariant?.price ?? product.price)}</strong><span>{defaultVariant?.item_count ?? product.category}</span><div><Link className="button primary" to={`/products/${product.slug}`}>View details</Link><Link className="button secondary" to={`/shop?type=${product.product_type}`}>Filter shop</Link></div></article>;
+            })}
+          </div>
+        </section>
 
         <section className="section" id="collection">
           <div className="section-heading"><h2>Cute Essentials</h2><p>Browse fixed products when you want to choose the exact little happy find.</p></div>
@@ -205,7 +198,7 @@ function Storefront() {
 
       <CartDrawer isOpen={isCartOpen} cart={cart} orderNote={orderNote} subtotal={subtotal} shipping={shipping} total={total} onClose={() => setCartOpen(false)} onNote={setOrderNote} onQuantity={updateQuantity} onCheckout={() => cart.length ? setCheckoutOpen(true) : setToast("Add an item before checkout")} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setCheckoutOpen(false)} onSubmit={(customer) => void submitCheckout(customer)} />
-      <footer className="footer"><div><strong>KhazanaScoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><a href="#mystery">Mystery Scoops</a><a href="#build">Build Your Scoop</a><a href="#collection">Cute Essentials</a></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
+      <footer className="footer"><div><strong>KhazanaScoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><Link to="/shop?type=mystery_scoop">Mystery Scoops</Link><Link to="/shop?type=build_your_own">Build Your Scoop</Link><a href="#collection">Cute Essentials</a></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
       <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
     </>
   );
@@ -402,15 +395,6 @@ function ProductCard({ product, onAdd }: { product: Product; onAdd: () => void }
 
 function VariantGrid({ variants, selectedId, onSelect }: { variants: Variant[]; selectedId: string; onSelect: (id: string) => void }) {
   return <div className="variant-grid">{variants.map((variant) => <button className={`variant-card ${variant.id === selectedId ? "active" : ""}`} key={variant.id} onClick={() => onSelect(variant.id)}>{variant.badge ? <span className="badge">{variant.badge}</span> : null}<strong>{variant.name}</strong><small>{variant.item_count}</small><span className="price">{money.format(variant.price)}</span>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}<small>{variant.line}</small><ul>{variant.rules.slice(0, 2).map((rule) => <li key={rule}>{rule}</li>)}</ul></button>)}</div>;
-}
-
-function BuildYourOwn({ product, selectedId, onSelect, onAdd }: { product: Product; selectedId: string; onSelect: (id: string) => void; onAdd: (preferences: Record<string, string>) => void }) {
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = Object.fromEntries(new FormData(event.currentTarget).entries());
-    onAdd(Object.fromEntries(Object.entries(form).map(([key, value]) => [key, String(value)])));
-  }
-  return <section className="section byo" id="build"><div><p className="soft-label">Build Your Own Scoop</p><h2>More control, still packed like a surprise.</h2><p>{product.description}</p><VariantGrid variants={product.variants} selectedId={selectedId} onSelect={onSelect} /></div><form className="preference-form" onSubmit={submit}><label>Favourite colours <input name="colours" placeholder="Pink, blue, lavender" /></label><label>Loved categories <input name="loved" placeholder="Stationery, hair accessories" /></label><label>Avoid categories <input name="avoid" placeholder="Earrings, keychains" /></label><label>Occasion<select name="occasion"><option>Self-care</option><option>Birthday</option><option>Gifting</option><option>Just because</option></select></label><label>Extra note <textarea name="note" placeholder="Please make it cute and pastel." /></label><button className="button primary" type="submit">Add Build-Your-Own</button><p className="fine-print">We will try to follow your preferences as closely as possible based on available stock.</p></form></section>;
 }
 
 function ReviewsAndFaq() {
