@@ -1,5 +1,5 @@
 import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
-import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {
   adminLogin,
   createAdminProduct,
@@ -33,6 +33,15 @@ const emptyCustomer: Customer = { name: "", phone: "", email: "", address: "" };
 function App() {
   return (
     <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <>
+      <RouteTransition />
       <Routes>
         <Route path="/" element={<Storefront />} />
         <Route path="/shop" element={<CatalogPage />} />
@@ -58,12 +67,30 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
+}
+
+function RouteTransition() {
+  const location = useLocation();
+  const [isTransitioning, setTransitioning] = useState(false);
+
+  useEffect(() => {
+    setTransitioning(true);
+    const timer = window.setTimeout(() => setTransitioning(false), 420);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, location.search]);
+
+  return <div className={`route-progress ${isTransitioning ? "show" : ""}`} aria-hidden="true" />;
+}
+
+function LoadingScreen({ label }: { label: string }) {
+  return <section className="loading-screen" role="status" aria-live="polite"><div className="loading-mark"><span>KS</span></div><strong>{label}</strong><p>Getting the cute bits ready.</p><div className="loading-dots"><i /><i /><i /></div></section>;
 }
 
 function Storefront() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderNote, setOrderNote] = useState("");
   const [category, setCategory] = useState("All");
@@ -75,7 +102,8 @@ function Storefront() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getProducts().then(setProducts).catch((caught: Error) => setError(caught.message));
+    setLoading(true);
+    getProducts().then(setProducts).catch((caught: Error) => setError(caught.message)).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -100,6 +128,11 @@ function Storefront() {
   const shipping = subtotal === 0 || subtotal >= 499 ? 0 : 49;
   const total = subtotal + shipping;
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const buildYourOwnCard = {
+    title: "Build Your Own Scoop",
+    description: "Choose your favourite products from our list and build your own cute box. This option is perfect if you want full control over what goes inside your scoop. You can select the items you like from the available product list, and we'll pack them beautifully like a surprise box. You choose the products, we make it cute.",
+    cta: "Build Your Own Scoop",
+  };
 
   function addToCart(product: Product, variant: Variant | null, preferences: Record<string, string> = {}) {
     const variantId = variant?.id ?? "standard";
@@ -140,37 +173,36 @@ function Storefront() {
 
   return (
     <>
-      <div className="announce">FREE SHIPPING PAN INDIA • Ships in 5-6 working days</div>
       <header className="site-header">
         <button className="icon-button mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><span /><span /><span /></button>
         <a className="brand" href="#home" aria-label="KhazanaScoop home"><span className="brand-mark">KS</span><span>KhazanaScoop</span></a>
         <nav className={`nav ${menuOpen ? "open" : ""}`}>
-          <Link to="/shop">Shop All</Link><Link to="/shop?type=mystery_scoop">Mystery Scoops</Link><Link to="/shop?type=build_your_own">Build Your Scoop</Link><Link to="/about">About</Link><Link to="/profile">Account</Link>
+          <Link to="/shop">Shop All</Link><Link to="/products/mystery-scoop">Mystery Scoops</Link><Link to="/products/build-your-own-scoop">Build Your Scoop</Link><Link to="/about">About</Link><Link to="/profile">Account</Link>
         </nav>
         <button className="cart-button" onClick={() => setCartOpen(true)} aria-label="Open cart">Cart <span>{cartCount}</span></button>
       </header>
       {error ? <div className="api-error">{error}</div> : null}
 
-      <main>
+      {isLoading ? <main><LoadingScreen label="Loading KhazanaScoop" /></main> : <main>
         <section className="hero" id="home">
           <div className="hero-copy">
             <h1>Cute surprises, packed just for you.</h1>
             <p>Pick a mystery scoop or build your own box with adorable stationery, accessories, beauty minis, and little happy finds.</p>
-            <div className="hero-actions"><Link className="button primary" to="/shop?type=mystery_scoop">Shop Mystery Scoops</Link><Link className="button secondary" to="/shop?type=build_your_own">Build My Scoop</Link></div>
+            <div className="hero-actions"><Link className="button primary" to="/products/mystery-scoop">Shop Mystery Scoops</Link><Link className="button secondary" to="/products/build-your-own-scoop">Build My Scoop</Link></div>
             <div className="trust-row"><span>Prepaid only</span><span>Order notes</span><span>Gift-ready</span></div>
           </div>
           <div className="hero-media">
             <img src="/assets/khazana-product-hero.png" alt="Pastel mystery scoop box with cute products" />
-            <div className="mini-card"><strong>{mysteryProduct?.name ?? "Mystery Scoop"}</strong><span>{mysteryProduct?.variants[1]?.item_count ?? "12 products + 2 surprise gifts"} • {money.format(mysteryProduct?.variants[1]?.price ?? 999)}</span></div>
+            <div className="mini-card"><strong>{mysteryProduct?.name ?? "Mystery Scoop"}</strong><span>{mysteryProduct?.variants[1]?.item_count ?? "12 basic items + 3 premium items"} • {money.format(mysteryProduct?.variants[1]?.price ?? 999)}</span></div>
           </div>
         </section>
 
         <section className="section how">
-          <div className="section-heading"><h2>How it works</h2><p>Choose a path, add your notes, and we pack a cheerful box based on stock and preferences.</p></div>
+          <div className="section-heading"><h2>How It Works</h2><p>Choose a path, add your notes, and we pack a cheerful box based on stock and preferences.</p></div>
           <div className="steps">
-            <article><span>1</span><h3>Choose scoop</h3><p>Mystery, build-your-own, or fixed cute essentials.</p></article>
-            <article><span>2</span><h3>Add notes</h3><p>Tell us what to avoid: earrings, keychains, hair clips, colours.</p></article>
-            <article><span>3</span><h3>Pay prepaid</h3><p>Checkout creates a paid order for careful fulfilment.</p></article>
+            <article><span>1</span><h3>Choose your scoop</h3><p>Go for a Mystery Scoop, Customisable Box, Gift Hampers, or fixed cute essentials.</p></article>
+            <article><span>2</span><h3>Tell us your likes & dislikes</h3><p>You can mention your favourite colours, preferred vibe, or items you want to avoid, like earrings, keychains, hair clips, or anything else.</p></article>
+            <article><span>3</span><h3>Pay & relax</h3><p>All orders are prepaid. Once your order is placed, we pack your box with care and send it your way.</p></article>
           </div>
         </section>
 
@@ -180,7 +212,8 @@ function Storefront() {
             {featuredScoops.map((product) => {
               const defaultVariant = product.variants.find((variant) => variant.is_default) ?? product.variants[0];
               const typeLabel = product.product_type === "mystery_scoop" ? "Mystery Scoop" : "Build Your Own";
-              return <article className="scoop-shortcut-card" key={product.id}><p className="soft-label">{typeLabel}</p><h3>{product.name}</h3><p>{product.description}</p><strong>{money.format(defaultVariant?.price ?? product.price)}</strong><span>{defaultVariant?.item_count ?? product.category}</span><div><Link className="button primary" to={`/products/${product.slug}`}>View details</Link><Link className="button secondary" to={`/shop?type=${product.product_type}`}>Filter shop</Link></div></article>;
+              const isBuildYourOwn = product.product_type === "build_your_own";
+              return <article className="scoop-shortcut-card" key={product.id}><p className="soft-label">{typeLabel}</p><h3>{isBuildYourOwn ? buildYourOwnCard.title : product.name}</h3><p>{isBuildYourOwn ? buildYourOwnCard.description : product.description}</p><strong>{money.format(defaultVariant?.price ?? product.price)}</strong><span>{defaultVariant?.item_count ?? product.category}</span><div><Link className="button primary" to={`/products/${product.slug}`}>{isBuildYourOwn ? buildYourOwnCard.cta : "View details"}</Link><Link className="button secondary" to={`/products/${product.slug}`}>{isBuildYourOwn ? "View details" : "Choose size"}</Link></div></article>;
             })}
           </div>
         </section>
@@ -194,11 +227,11 @@ function Storefront() {
           <div className="product-grid">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} onAdd={() => addToCart(product, null)} />)}</div>
         </section>
         <ReviewsAndFaq />
-      </main>
+      </main>}
 
       <CartDrawer isOpen={isCartOpen} cart={cart} orderNote={orderNote} subtotal={subtotal} shipping={shipping} total={total} onClose={() => setCartOpen(false)} onNote={setOrderNote} onQuantity={updateQuantity} onCheckout={() => cart.length ? setCheckoutOpen(true) : setToast("Add an item before checkout")} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setCheckoutOpen(false)} onSubmit={(customer) => void submitCheckout(customer)} />
-      <footer className="footer"><div><strong>KhazanaScoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><Link to="/shop?type=mystery_scoop">Mystery Scoops</Link><Link to="/shop?type=build_your_own">Build Your Scoop</Link><a href="#collection">Cute Essentials</a></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
+      <footer className="footer"><div><strong>KhazanaScoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><Link to="/products/mystery-scoop">Mystery Scoops</Link><Link to="/products/build-your-own-scoop">Build Your Scoop</Link><a href="#collection">Cute Essentials</a></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
       <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
     </>
   );

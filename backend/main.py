@@ -303,6 +303,56 @@ def safe_json_list(value: str | None) -> list[str]:
         return []
 
 
+SCOOP_SIZE_COPY = {
+    "budget": {
+        "name": "Small Scoop",
+        "item_count": "7 basic items + 2 premium items",
+        "min_items": 9,
+        "max_items": 9,
+        "rules": ["Includes 7 basic items", "Includes 2 premium items"],
+    },
+    "standard": {
+        "name": "Medium Scoop",
+        "item_count": "12 basic items + 3 premium items",
+        "min_items": 15,
+        "max_items": 15,
+        "rules": ["Includes 12 basic items", "Includes 3 premium items"],
+    },
+    "premium": {
+        "name": "Large Scoop",
+        "item_count": "15 basic items + 5 premium items",
+        "min_items": 20,
+        "max_items": 20,
+        "rules": ["Includes 15 basic items", "Includes 5 premium items"],
+    },
+}
+
+
+def scoop_variant_copy(product_type: str, tier: str) -> dict[str, Any] | None:
+    if product_type not in {"mystery_scoop", "build_your_own"}:
+        return None
+    return SCOOP_SIZE_COPY.get(tier)
+
+
+def variant_to_out(product_type: str, variant) -> VariantOut:
+    size_copy = scoop_variant_copy(product_type, variant.tier)
+    return VariantOut(
+        id=variant.id,
+        name=size_copy["name"] if size_copy else variant.name,
+        tier=variant.tier,
+        item_count=size_copy["item_count"] if size_copy else variant.itemCount,
+        min_items=size_copy["min_items"] if size_copy else variant.minItems,
+        max_items=size_copy["max_items"] if size_copy else variant.maxItems,
+        surprise_gift_count=0 if size_copy else variant.surpriseGiftCount,
+        rules=size_copy["rules"] if size_copy else safe_json_list(variant.rulesJson),
+        price=variant.price,
+        compare_at_price=variant.compareAtPrice,
+        badge=variant.badge,
+        line=variant.line,
+        is_default=variant.isDefault,
+    )
+
+
 def product_to_out(product, review_stats: tuple[float, int] = (0, 0)) -> ProductOut:
     average, count = review_stats
     return ProductOut(
@@ -321,21 +371,7 @@ def product_to_out(product, review_stats: tuple[float, int] = (0, 0)) -> Product
         average_rating=average,
         review_count=count,
         variants=[
-            VariantOut(
-                id=variant.id,
-                name=variant.name,
-                tier=variant.tier,
-                item_count=variant.itemCount,
-                min_items=variant.minItems,
-                max_items=variant.maxItems,
-                surprise_gift_count=variant.surpriseGiftCount,
-                rules=safe_json_list(variant.rulesJson),
-                price=variant.price,
-                compare_at_price=variant.compareAtPrice,
-                badge=variant.badge,
-                line=variant.line,
-                is_default=variant.isDefault,
-            )
+            variant_to_out(product.productType, variant)
             for variant in sorted(product.variants or [], key=lambda item: item.sortOrder)
         ],
     )
@@ -441,8 +477,9 @@ async def resolve_order_item(client, item: CartItemIn) -> dict[str, Any]:
         variant = next((entry for entry in product.variants if entry.id == item.variant_id), None)
         if variant is None:
             raise HTTPException(status_code=400, detail=f"Invalid variant for {product.name}")
-        variant_name = variant.name
-        item_count = variant.itemCount
+        size_copy = scoop_variant_copy(product.productType, variant.tier)
+        variant_name = size_copy["name"] if size_copy else variant.name
+        item_count = size_copy["item_count"] if size_copy else variant.itemCount
         price = variant.price
     elif item.variant_id != "standard":
         raise HTTPException(status_code=400, detail=f"Invalid variant for {product.name}")
@@ -475,9 +512,6 @@ async def active_promotions(client, code: str | None = None):
 
 
 def calculate_promotions(promotions, items: list[dict[str, Any]], subtotal: int) -> tuple[int, bool, str | None]:
-    quantities: dict[str, int] = {}
-    for item in items:
-        quantities[item["productId"]] = quantities.get(item["productId"], 0) + item["quantity"]
     best_discount = 0
     free_shipping = False
     applied_codes: list[str] = []
@@ -485,9 +519,7 @@ def calculate_promotions(promotions, items: list[dict[str, Any]], subtotal: int)
         if subtotal < promotion.minSubtotal:
             continue
         if promotion.promotionType == "combo":
-            required = {entry.productId: entry.quantity for entry in promotion.products or []}
-            if not required or any(quantities.get(product_id, 0) < quantity for product_id, quantity in required.items()):
-                continue
+            continue
         discount = 0
         if promotion.discountType == "percentage":
             discount = subtotal * promotion.discountValue // 100

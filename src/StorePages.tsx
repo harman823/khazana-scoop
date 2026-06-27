@@ -10,10 +10,8 @@ import {
   Plus,
   Search,
   ShoppingBag,
-  SlidersHorizontal,
   Star,
   Truck,
-  X,
 } from "lucide-react";
 import { createCheckout, createReview, getMyOrders, getProduct, getProducts, getPromotions, getReviews } from "./api";
 import { getUser, isSupabaseConfigured, signIn, signOut, signUp } from "./supabase";
@@ -22,8 +20,24 @@ import type { CartItem, Customer, Order, Product, Promotion, Review, Variant } f
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const CART_KEY = "khazanascoopCustomerCart";
 const PROFILE_KEY = "khazanascoopCustomerProfile";
-const WISHLIST_KEY = "khazanascoopWishlist";
-const byoCategoryOptions = ["Stationery", "Hair Accessories", "Keychains & Charms", "Beauty Minis", "Cute Pens", "Pocket Mirrors", "Stickers & Notes", "Surprise Gifts"];
+type ByoItemGroup = "basicItems" | "premiumItems" | "giftHampers";
+type ByoPreferences = {
+  colour: string;
+  occasion: string;
+  basicItems: string[];
+  premiumItems: string[];
+  giftHampers: string[];
+};
+const defaultByoPreferences: ByoPreferences = { colour: "Neutral surprise", occasion: "Self-care", basicItems: [], premiumItems: [], giftHampers: [] };
+const byoBasicItemOptions = ["Stationery", "Cute Pens", "Stickers & Notes", "Mini Hair Clips", "Scrunchies", "Pocket Mirrors", "Keychains & Charms", "Beauty Minis", "Memo Pads", "Bookmarks", "Washi Tapes", "Phone Charms", "Hair Ties", "Erasers", "Mini Plush"];
+const byoPremiumItemOptions = ["Premium Journal", "Premium Bracelet", "Korean Hair Claw", "Charm Keychain Set", "Beauty Combo", "Desk Organizer", "Mini Perfume", "Satin Scrunchie Set", "Gift Pouch", "Premium Stationery Set"];
+const giftHamperOptions = ["Birthday hamper", "Best friend hamper", "Self-care hamper", "Stationery hamper", "Pink theme hamper", "Pastel theme hamper", "Beauty mini hamper", "Desk essentials hamper"];
+const byoTierLimits: Record<string, { basic: number; premium: number; label: string }> = {
+  budget: { basic: 7, premium: 2, label: "Small Scoop" },
+  standard: { basic: 12, premium: 3, label: "Medium Scoop" },
+  premium: { basic: 15, premium: 5, label: "Large Scoop" },
+};
+const collectionCategoryOrder = ["All", "Hair Accessories", "Cute Pens", "Pocket Mirrors", "Stickers & Notes", "Keychains & Charms", "Beauty Minis", "Surprise Gifts"];
 const spritePositions: Record<string, string> = {
   scrunchie: "0% 0%",
   pen: "33.333% 0%",
@@ -103,7 +117,7 @@ function StoreHeader() {
     <header className="commerce-header">
       <button className="commerce-icon mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><Menu /></button>
       <Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link>
-      <form className="commerce-search" onSubmit={search}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search cute finds, scoops and gifts" /></form>
+      <form className="commerce-search" onSubmit={search}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search cute finds and gifts" /></form>
       <nav className={`commerce-actions ${menuOpen ? "open" : ""}`}>
         <NavLink to="/shop">Shop</NavLink>
         <NavLink to="/about">About</NavLink>
@@ -112,21 +126,13 @@ function StoreHeader() {
         <NavLink className="action-icon cart-link" to="/cart" aria-label={`Cart with ${count} items`}><ShoppingBag /><span>{count}</span></NavLink>
       </nav>
     </header>
-    <nav className="category-nav">
-      <Link to="/shop?type=mystery_scoop">Mystery Scoops</Link>
-      <Link to="/shop?type=build_your_own">Build Your Scoop</Link>
-      <Link to="/shop?category=Hair+Accessories">Hair Accessories</Link>
-      <Link to="/shop?category=Cute+Pens">Stationery</Link>
-      <Link to="/shop?category=Keychains+%26+Charms">Keychains & Charms</Link>
-      <Link to="/shop?max=99">Under ₹99</Link>
-    </nav>
   </>;
 }
 
 function StoreFooter() {
   return <footer className="commerce-footer">
     <div><Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link><p>Cute finds, mystery scoops and thoughtful little gifts, packed in India.</p></div>
-    <div><strong>Shop</strong><Link to="/shop">All products</Link><Link to="/shop?type=mystery_scoop">Mystery scoops</Link><Link to="/shop?type=build_your_own">Build your scoop</Link></div>
+    <div><strong>Shop</strong><Link to="/shop">All products</Link><Link to="/products/mystery-scoop">Mystery scoops</Link><Link to="/products/build-your-own-scoop">Build your scoop</Link></div>
     <div><strong>Customer care</strong><Link to="/my-orders">Track my order</Link><Link to="/faq">FAQ</Link><Link to="/contact">Contact us</Link><Link to="/returns">Returns</Link></div>
     <div><strong>Information</strong><Link to="/about">About us</Link><Link to="/shipping">Shipping policy</Link><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link></div>
   </footer>;
@@ -140,60 +146,53 @@ function Breadcrumbs({ items }: { items: Array<{ label: string; to?: string }> }
   return <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/">Home</Link>{items.map((item) => <span key={item.label}><ChevronRight size={14} />{item.to ? <Link to={item.to}>{item.label}</Link> : item.label}</span>)}</nav>;
 }
 
+function PageLoading({ label }: { label: string }) {
+  return <StoreLayout><section className="page-loading" role="status" aria-live="polite"><div className="loading-mark"><span>KS</span></div><strong>{label}</strong><p>Just a moment while the page gets ready.</p><div className="loading-dots"><i /><i /><i /></div></section></StoreLayout>;
+}
+
+function ProductSkeletonGrid() {
+  return <div className="catalog-grid cute-essentials-grid" aria-hidden="true">{Array.from({ length: 8 }).map((_, index) => <article className="catalog-card cute-essential-card skeleton-card" key={index}><div className="catalog-media cute-essential-art skeleton-block" /><div className="catalog-card-body"><span className="skeleton-line wide" /><span className="skeleton-line short" /><div className="catalog-price"><span className="skeleton-line price" /><span className="skeleton-button" /></div></div></article>)}</div>;
+}
+
 function CatalogCard({ product }: { product: Product }) {
-  const [liked, setLiked] = useState(() => JSON.parse(localStorage.getItem(WISHLIST_KEY) ?? "[]").includes(product.id));
-  function toggleLike() {
-    const current: string[] = JSON.parse(localStorage.getItem(WISHLIST_KEY) ?? "[]");
-    const next = current.includes(product.id) ? current.filter((id) => id !== product.id) : [...current, product.id];
-    localStorage.setItem(WISHLIST_KEY, JSON.stringify(next));
-    setLiked(next.includes(product.id));
-  }
-  return <article className="catalog-card">
-    <div className="catalog-media" style={{ "--product-color": product.color ?? "#ffe8ed" } as CSSProperties}>
-      <Link to={`/products/${product.slug}`}><ProductVisual product={product} /></Link>
-      {product.badge ? <em>{product.badge}</em> : null}
-      <button onClick={toggleLike} aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}><Heart fill={liked ? "currentColor" : "none"} /></button>
+  return <article className="catalog-card cute-essential-card">
+    <div className="catalog-media cute-essential-art" style={{ "--product-color": product.color ?? "#ffe8ed" } as CSSProperties}>
+      <Link to={`/products/${product.slug}`} aria-label={product.name}>{product.icon ? <span>{product.icon}</span> : <ProductVisual product={product} />}</Link>
     </div>
-    <Link className="catalog-copy" to={`/products/${product.slug}`}><small>{product.category}</small><h3>{product.name}</h3><div className="rating"><Star size={14} fill="currentColor" /> {product.average_rating || "New"} <span>({product.review_count})</span></div></Link>
-    <div className="catalog-price"><strong>{money.format(product.price)}</strong><button onClick={() => addProduct(product)}>Add to cart</button></div>
+    <div className="catalog-card-body"><Link className="catalog-copy" to={`/products/${product.slug}`}><h3>{product.name}</h3><small>{product.category}</small></Link><div className="catalog-price"><strong>{money.format(product.price)}</strong><button onClick={() => addProduct(product)}>Add</button></div></div>
   </article>;
 }
 
 export function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [isLoading, setLoading] = useState(true);
   const [params, setParams] = useSearchParams();
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const query = params.get("q") ?? "";
   const categoriesSelected = params.getAll("category");
-  const colorsSelected = params.getAll("color");
-  const type = params.get("type") ?? "";
   const sort = params.get("sort") ?? "featured";
-  const minPrice = Number(params.get("min") ?? 0);
-  const maxPrice = Number(params.get("max") ?? 0);
 
   useEffect(() => {
-    void Promise.all([getProducts(), getPromotions()]).then(([catalog, activePromotions]) => {
+    void getProducts().then((catalog) => {
       setAllProducts(catalog);
-      setPromotions(activePromotions);
     });
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     void getProducts({
       q: query || undefined,
-      product_type: type || undefined,
+      product_type: "individual",
       categories: categoriesSelected,
-      colors: colorsSelected,
-      min_price: minPrice || undefined,
-      max_price: maxPrice || undefined,
       sort,
-    }).then(setProducts);
+    }).then(setProducts).finally(() => setLoading(false));
   }, [params.toString()]);
 
-  const categories = useMemo(() => Array.from(new Set(allProducts.map((product) => product.category))).sort(), [allProducts]);
-  const colors = useMemo(() => Array.from(new Set(allProducts.map((product) => product.color).filter(Boolean) as string[])).sort(), [allProducts]);
+  const shopProducts = useMemo(() => allProducts.filter((product) => product.product_type === "individual"), [allProducts]);
+  const collectionCategories = useMemo(() => {
+    const available = new Set(shopProducts.map((product) => product.category));
+    return collectionCategoryOrder.filter((category) => category === "All" || available.has(category));
+  }, [shopProducts]);
   const visible = products;
 
   function setParam(key: string, value: string) {
@@ -202,34 +201,19 @@ export function CatalogPage() {
     setParams(next);
   }
 
-  function toggleParam(key: string, value: string) {
+  function setCategory(category: string) {
     const next = new URLSearchParams(params);
-    const selected = next.getAll(key);
-    next.delete(key);
-    (selected.includes(value) ? selected.filter((entry) => entry !== value) : [...selected, value]).forEach((entry) => next.append(key, entry));
+    next.delete("category");
+    if (category !== "All") next.set("category", category);
     setParams(next);
   }
 
   return <StoreLayout>
-    <section className="catalog-page">
+    <section className="catalog-page cute-essentials-page">
       <Breadcrumbs items={[{ label: "Shop" }]} />
-      <div className="catalog-heading"><div><h1>Shop all cute finds</h1><p>Discover stationery, accessories, gifts and scoop-ready favorites.</p></div><span>{visible.length} products</span></div>
-      {promotions.filter((promotion) => promotion.banner_placement === "catalog").map((promotion) => <div className="promo-banner" key={promotion.id}><div><strong>{promotion.title}</strong><p>{promotion.message}</p></div><Link to={`/shop?${Array.from(new Set(promotion.product_ids.map((id) => allProducts.find((product) => product.id === id)?.category).filter(Boolean))).map((category) => `category=${encodeURIComponent(category!)}`).join("&")}`}>Shop the combo</Link></div>)}
-      <div className="mobile-catalog-tools"><button onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={18} /> Filters</button><select value={sort} onChange={(event) => setParam("sort", event.target.value)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name</option></select></div>
-      <div className="catalog-layout">
-        <aside className={`catalog-filters ${filtersOpen ? "open" : ""}`}>
-          <div className="filter-title"><strong>Filters</strong><button onClick={() => setFiltersOpen(false)} aria-label="Close filters"><X /></button></div>
-          <fieldset><legend>Product type</legend><label><input type="radio" checked={!type} onChange={() => setParam("type", "")} /> All products</label><label><input type="radio" checked={type === "individual"} onChange={() => setParam("type", "individual")} /> Cute essentials</label><label><input type="radio" checked={type === "mystery_scoop"} onChange={() => setParam("type", "mystery_scoop")} /> Mystery scoops</label><label><input type="radio" checked={type === "build_your_own"} onChange={() => setParam("type", "build_your_own")} /> Build your own</label></fieldset>
-          <fieldset><legend>Category</legend>{categories.map((item) => <label key={item}><input type="checkbox" checked={categoriesSelected.includes(item)} onChange={() => toggleParam("category", item)} /> {item}</label>)}</fieldset>
-          <fieldset><legend>Color</legend><div className="color-filter-grid">{colors.map((item) => <label key={item} title={item}><input type="checkbox" checked={colorsSelected.includes(item)} onChange={() => toggleParam("color", item)} /><span style={{ background: item }} />{item}</label>)}</div></fieldset>
-          <fieldset><legend>Price range</legend><div className="price-filter-row"><label>Min<input type="number" min="0" value={minPrice || ""} onChange={(event) => setParam("min", event.target.value)} placeholder="₹0" /></label><label>Max<input type="number" min="0" value={maxPrice || ""} onChange={(event) => setParam("max", event.target.value)} placeholder="₹2000" /></label></div></fieldset>
-          <button className="clear-filters" onClick={() => setParams({})}>Clear all filters</button>
-        </aside>
-        <div>
-          <div className="desktop-sort"><span>Showing {visible.length} results</span><label>Sort by <select value={sort} onChange={(event) => setParam("sort", event.target.value)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name</option></select></label></div>
-          {visible.length ? <div className="catalog-grid">{visible.map((product) => <CatalogCard product={product} key={product.id} />)}</div> : <div className="empty-state"><Search /><h2>No cute finds matched</h2><p>Try clearing a filter or searching for another product.</p><button onClick={() => setParams({})}>View all products</button></div>}
-        </div>
-      </div>
+      <div className="catalog-heading cute-essentials-heading"><div><h1>Cute Essentials</h1></div><p>Browse fixed products when you want to choose the exact little happy find.</p></div>
+      <div className="collection-tools"><div className="chips">{collectionCategories.map((item) => <button className={`chip ${(!categoriesSelected.length && item === "All") || categoriesSelected.includes(item) ? "active" : ""}`} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><select value={sort} onChange={(event) => setParam("sort", event.target.value)} aria-label="Sort products"><option value="featured">Featured</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option><option value="name">Name</option></select></div>
+      {isLoading ? <ProductSkeletonGrid /> : visible.length ? <div className="catalog-grid cute-essentials-grid">{visible.map((product) => <CatalogCard product={product} key={product.id} />)}</div> : <div className="empty-state"><Search /><h2>No cute finds matched</h2><p>Try another category or search for a different product.</p><button onClick={() => setParams({})}>View all products</button></div>}
     </section>
   </StoreLayout>;
 }
@@ -237,6 +221,7 @@ export function CatalogPage() {
 export function ProductDetailPage() {
   const { slug = "" } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setLoading] = useState(true);
   const [related, setRelated] = useState<Product[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -244,31 +229,39 @@ export function ProductDetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", body: "" });
   const [reviewMessage, setReviewMessage] = useState("");
-  const [byoPreferences, setByoPreferences] = useState({ colour: "Pastel mix", occasion: "Self-care", loved: ["Stationery", "Hair Accessories"], avoid: ["Earrings"] });
+  const [byoPreferences, setByoPreferences] = useState<ByoPreferences>(defaultByoPreferences);
   useEffect(() => {
+    setLoading(true);
+    setProduct(null);
     void Promise.all([getProduct(slug), getProducts()]).then(([current, all]) => {
       setProduct(current);
       setSelectedId(current.variants.find((variant) => variant.is_default)?.id ?? current.variants[0]?.id ?? "");
       setRelated(all.filter((item) => item.id !== current.id && item.category === current.category).slice(0, 4));
-      setByoPreferences({ colour: "Pastel mix", occasion: "Self-care", loved: ["Stationery", "Hair Accessories"], avoid: ["Earrings"] });
+      setByoPreferences({ ...defaultByoPreferences, basicItems: [], premiumItems: [], giftHampers: [] });
       void getReviews(current.id).then(setReviews);
-    });
+    }).finally(() => setLoading(false));
   }, [slug]);
-  if (!product) return <StoreLayout><div className="page-loading">Loading product…</div></StoreLayout>;
+  if (isLoading || !product) return <PageLoading label="Loading product" />;
   const currentProduct = product;
   const selected = currentProduct.variants.find((variant) => variant.id === selectedId);
   const price = selected?.price ?? currentProduct.price;
   const isBuildYourOwn = currentProduct.product_type === "build_your_own";
+  const byoLimits = byoTierLimits[selected?.tier ?? "standard"] ?? byoTierLimits.standard;
+  const basicLimitReached = byoPreferences.basicItems.length >= byoLimits.basic;
+  const premiumLimitReached = byoPreferences.premiumItems.length >= byoLimits.premium;
   const byoPreferencePayload: Record<string, string> = isBuildYourOwn ? {
     colour: byoPreferences.colour,
-    loved: byoPreferences.loved.join(", "),
-    avoid: byoPreferences.avoid.length ? byoPreferences.avoid.join(", ") : "None",
     occasion: byoPreferences.occasion,
+    scoop_size: byoLimits.label,
+    basic_items: byoPreferences.basicItems.join(", ") || "None selected",
+    premium_items: byoPreferences.premiumItems.join(", ") || "None selected",
+    gift_hampers: byoPreferences.giftHampers.join(", ") || "None selected",
   } : {};
-  function toggleByoPreference(group: "loved" | "avoid", value: string) {
+  function toggleByoItem(group: ByoItemGroup, value: string, limit?: number) {
     setByoPreferences((current) => {
       const values = current[group];
       const nextValues = values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+      if (limit != null && !values.includes(value) && values.length >= limit) return current;
       return { ...current, [group]: nextValues };
     });
   }
@@ -302,8 +295,8 @@ export function ProductDetailPage() {
           <div className="detail-price"><strong>{money.format(price)}</strong><span>Inclusive of all taxes</span></div>
           <p className="stock-line">In stock and ready to pack</p><p className="detail-description">{currentProduct.description}</p>
           {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}</button>)}</div> : null}
-          {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.min_items === selected.max_items ? `${selected.min_items} core items` : `${selected.min_items}-${selected.max_items} core items`} + {selected.surprise_gift_count} surprise {selected.surprise_gift_count === 1 ? "gift" : "gifts"}.</p></div> : null}
-          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="preference-select-row"><label>Colour mood<select value={byoPreferences.colour} onChange={(event) => setByoPreferences((current) => ({ ...current, colour: event.target.value }))}><option>Pastel mix</option><option>Pink and cute</option><option>Blue and mint</option><option>Lavender</option><option>Neutral surprise</option></select></label><label>Occasion<select value={byoPreferences.occasion} onChange={(event) => setByoPreferences((current) => ({ ...current, occasion: event.target.value }))}><option>Self-care</option><option>Birthday</option><option>Gifting</option><option>School or college</option><option>Just because</option></select></label></div><fieldset><legend>Loved categories</legend>{byoCategoryOptions.map((item) => <label key={item}><input type="checkbox" checked={byoPreferences.loved.includes(item)} onChange={() => toggleByoPreference("loved", item)} /> {item}</label>)}</fieldset><fieldset><legend>Avoid categories</legend>{["Earrings", "Keychains & Charms", "Hair Accessories", "Beauty Minis", "Cute Pens", "Pocket Mirrors"].map((item) => <label key={item}><input type="checkbox" checked={byoPreferences.avoid.includes(item)} onChange={() => toggleByoPreference("avoid", item)} /> {item}</label>)}</fieldset></div> : null}
+          {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.item_count}.</p></div> : null}
+          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="preference-select-row"><label>Colour mood<select value={byoPreferences.colour} onChange={(event) => setByoPreferences((current) => ({ ...current, colour: event.target.value }))}><option>Neutral surprise</option><option>Pastel mix</option><option>Pink and cute</option><option>Blue and mint</option><option>Lavender</option></select></label><label>Occasion<select value={byoPreferences.occasion} onChange={(event) => setByoPreferences((current) => ({ ...current, occasion: event.target.value }))}><option>Self-care</option><option>Birthday</option><option>Gifting</option><option>School or college</option><option>Just because</option></select></label></div><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{byoPreferences.basicItems.length}/{byoLimits.basic} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset><legend>Basic items</legend><p className="selection-count">Choose up to {byoLimits.basic}</p>{byoBasicItemOptions.map((item) => { const checked = byoPreferences.basicItems.includes(item); const locked = basicLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("basicItems", item, byoLimits.basic)} /> {item}</label>; })}</fieldset><fieldset><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p>{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("premiumItems", item, byoLimits.premium)} /> {item}</label>; })}</fieldset></div><fieldset className="gift-hamper-options"><legend>Gift hampers</legend><p className="selection-count">Optional hamper themes for gifting</p>{giftHamperOptions.map((item) => <label key={item}><input type="checkbox" checked={byoPreferences.giftHampers.includes(item)} onChange={() => toggleByoItem("giftHampers", item)} /> {item}</label>)}</fieldset></div> : null}
           <div className="purchase-row"><div className="quantity-stepper"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus /></button><strong>{quantity}</strong><button onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus /></button></div><button className="add-cart-primary" onClick={add}>{added ? "Added to cart" : "Add to cart"}</button></div>
           <Link className="buy-now" to="/cart" onClick={add}>Buy now</Link>
           <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-5 working days across India.</p></div></div>
@@ -345,7 +338,7 @@ export function CartPage() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     writeCart([]); setCart([]); setMessage(`Order ${order.id} placed successfully.`);
   }
-  return <StoreLayout><section className="standard-page cart-page"><Breadcrumbs items={[{ label: "Cart" }]} /><h1>Your shopping bag</h1>{message ? <div className="success-banner"><PackageCheck />{message}<Link to="/my-orders">View order</Link></div> : null}{cart.length ? <div className="cart-layout"><div className="cart-list">{cart.map((item) => <article key={item.localId}><div className="cart-product-art">✦</div><div><h3>{item.product_name}</h3><p>{item.variant_name}</p><strong>{money.format(item.price)}</strong></div><div className="quantity-stepper"><button onClick={() => update(item.localId, -1)}><Minus /></button><strong>{item.quantity}</strong><button onClick={() => update(item.localId, 1)}><Plus /></button></div><button className="remove-item" onClick={() => update(item.localId, -item.quantity)}>Remove</button></article>)}</div><form className="checkout-summary" onSubmit={checkout}><h2>Order summary</h2><div><span>Subtotal</span><strong>{money.format(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? money.format(shipping) : "Free"}</strong></div><div className="summary-total"><span>Total before offers</span><strong>{money.format(subtotal + shipping)}</strong></div><h3>Delivery details</h3><input required placeholder="Full name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /><input required placeholder="Phone" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><input required type="email" placeholder="Email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /><textarea required placeholder="Complete shipping address" value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /><h3>Scoop preferences</h3><label>Do not include<textarea value={exclusions} onChange={(event) => setExclusions(event.target.value)} placeholder="Earrings, keychains, specific colours or materials" /></label><label>Order and gift notes<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} placeholder="Birthday message, colour preferences, packing requests" /></label><label>Promotion code<input value={promotionCode} onChange={(event) => setPromotionCode(event.target.value.toUpperCase())} placeholder="Optional" /></label><button>Checkout prepaid</button><small>Automatic combo and free-shipping offers are calculated securely by the backend.</small></form></div> : <div className="empty-state"><ShoppingBag /><h2>Your bag is waiting</h2><p>Add a few cute finds and they will appear here.</p><Link to="/shop">Start shopping</Link></div>}</section></StoreLayout>;
+  return <StoreLayout><section className="standard-page cart-page"><Breadcrumbs items={[{ label: "Cart" }]} /><h1>Your shopping bag</h1>{message ? <div className="success-banner"><PackageCheck />{message}<Link to="/my-orders">View order</Link></div> : null}{cart.length ? <div className="cart-layout"><div className="cart-list">{cart.map((item) => <article key={item.localId}><div className="cart-product-art">✦</div><div><h3>{item.product_name}</h3><p>{item.variant_name}</p><strong>{money.format(item.price)}</strong></div><div className="quantity-stepper"><button onClick={() => update(item.localId, -1)}><Minus /></button><strong>{item.quantity}</strong><button onClick={() => update(item.localId, 1)}><Plus /></button></div><button className="remove-item" onClick={() => update(item.localId, -item.quantity)}>Remove</button></article>)}</div><form className="checkout-summary" onSubmit={checkout}><h2>Order summary</h2><div><span>Subtotal</span><strong>{money.format(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? money.format(shipping) : "Free"}</strong></div><div className="summary-total"><span>Total before offers</span><strong>{money.format(subtotal + shipping)}</strong></div><h3>Delivery details</h3><input required placeholder="Full name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /><input required placeholder="Phone" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><input required type="email" placeholder="Email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /><textarea required placeholder="Complete shipping address" value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /><h3>Scoop preferences</h3><label>Do not include<textarea value={exclusions} onChange={(event) => setExclusions(event.target.value)} placeholder="Earrings, keychains, specific colours or materials" /></label><label>Order and gift notes<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} placeholder="Birthday message, colour preferences, packing requests" /></label><label>Promotion code<input value={promotionCode} onChange={(event) => setPromotionCode(event.target.value.toUpperCase())} placeholder="Optional" /></label><button>Checkout prepaid</button><small>Free-shipping offers are calculated securely by the backend.</small></form></div> : <div className="empty-state"><ShoppingBag /><h2>Your bag is waiting</h2><p>Add a few cute finds and they will appear here.</p><Link to="/shop">Start shopping</Link></div>}</section></StoreLayout>;
 }
 
 function AccountLayout({ title, children }: { title: string; children: React.ReactNode }) {

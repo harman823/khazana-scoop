@@ -14,9 +14,9 @@ export const demoProducts: Product[] = [
     average_rating: 4.9,
     review_count: 38,
     variants: [
-      { id: "small", name: "Budget Scoop", tier: "budget", item_count: "7 products + 1 surprise gift", min_items: 7, max_items: 7, surprise_gift_count: 1, rules: ["At least 3 categories", "One stationery item guaranteed", "Exclusions accepted"], price: 549, compare_at_price: 649, badge: "Budget", line: "A cheerful first scoop" },
-      { id: "medium", name: "Standard Scoop", tier: "standard", item_count: "12 products + 2 surprise gifts", min_items: 12, max_items: 12, surprise_gift_count: 2, rules: ["At least 4 categories", "Two stationery or accessory picks", "Exclusions accepted"], price: 999, compare_at_price: 1199, badge: "Best Value", line: "Our most balanced mix", is_default: true },
-      { id: "large", name: "Premium Scoop", tier: "premium", item_count: "20 products + 3 surprise gifts", min_items: 20, max_items: 20, surprise_gift_count: 3, rules: ["At least 5 categories", "Premium gift-ready packing", "Priority preference matching"], price: 1499, compare_at_price: 1799, badge: "Premium", line: "For gifting or a big haul" },
+      { id: "small", name: "Small Scoop", tier: "budget", item_count: "7 basic items + 2 premium items", min_items: 9, max_items: 9, surprise_gift_count: 0, rules: ["Includes 7 basic items", "Includes 2 premium items"], price: 549, compare_at_price: 649, badge: "Small", line: "A cheerful first scoop" },
+      { id: "medium", name: "Medium Scoop", tier: "standard", item_count: "12 basic items + 3 premium items", min_items: 15, max_items: 15, surprise_gift_count: 0, rules: ["Includes 12 basic items", "Includes 3 premium items"], price: 999, compare_at_price: 1199, badge: "Medium", line: "Our most balanced mix", is_default: true },
+      { id: "large", name: "Large Scoop", tier: "premium", item_count: "15 basic items + 5 premium items", min_items: 20, max_items: 20, surprise_gift_count: 0, rules: ["Includes 15 basic items", "Includes 5 premium items"], price: 1499, compare_at_price: 1799, badge: "Large", line: "For gifting or a big haul" },
     ],
   },
   {
@@ -32,9 +32,9 @@ export const demoProducts: Product[] = [
     average_rating: 4.8,
     review_count: 21,
     variants: [
-      { id: "byo-small", name: "Budget BYO", tier: "budget", item_count: "8 items + 1 surprise gift", min_items: 8, max_items: 8, surprise_gift_count: 1, rules: ["Choose up to 2 preferred categories", "Exclude up to 2 categories"], price: 699, badge: "Simple", line: "A few favourites" },
-      { id: "byo-medium", name: "Standard BYO", tier: "standard", item_count: "14 items + 2 surprise gifts", min_items: 14, max_items: 14, surprise_gift_count: 2, rules: ["Choose up to 4 preferred categories", "Colour and occasion matching"], price: 1199, badge: "Balanced", line: "More category variety", is_default: true },
-      { id: "byo-large", name: "Premium BYO", tier: "premium", item_count: "22 items + 3 surprise gifts", min_items: 22, max_items: 22, surprise_gift_count: 3, rules: ["Choose up to 6 preferred categories", "Priority preference matching", "Gift-ready premium packing"], price: 1699, badge: "Gift Box", line: "A generous custom bundle" },
+      { id: "byo-small", name: "Small Scoop", tier: "budget", item_count: "7 basic items + 2 premium items", min_items: 9, max_items: 9, surprise_gift_count: 0, rules: ["Includes 7 basic items", "Includes 2 premium items"], price: 699, badge: "Small", line: "A few favourites" },
+      { id: "byo-medium", name: "Medium Scoop", tier: "standard", item_count: "12 basic items + 3 premium items", min_items: 15, max_items: 15, surprise_gift_count: 0, rules: ["Includes 12 basic items", "Includes 3 premium items"], price: 1199, badge: "Medium", line: "More category variety", is_default: true },
+      { id: "byo-large", name: "Large Scoop", tier: "premium", item_count: "15 basic items + 5 premium items", min_items: 20, max_items: 20, surprise_gift_count: 0, rules: ["Includes 15 basic items", "Includes 5 premium items"], price: 1699, badge: "Large", line: "A generous custom bundle" },
     ],
   },
   ...[
@@ -121,21 +121,6 @@ export const demoPromotions: Promotion[] = [
     starts_at: new Date().toISOString(),
     product_ids: [],
   },
-  {
-    id: "desk-duo",
-    name: "Desk Duo",
-    title: "Desk Duo: save ₹49",
-    message: "Pair the Pastel Gel Pen Set with the Sticker & Note Pack and save ₹49 automatically.",
-    promotion_type: "combo",
-    discount_type: "fixed",
-    discount_value: 49,
-    min_subtotal: 0,
-    free_shipping: false,
-    automatic: true,
-    banner_placement: "catalog",
-    starts_at: new Date().toISOString(),
-    product_ids: ["pen", "stickers"],
-  },
 ];
 
 export const demoReviews: Review[] = [
@@ -144,8 +129,8 @@ export const demoReviews: Review[] = [
     product_id: "mystery-scoop",
     customer_name: "Aanya",
     rating: 5,
-    title: "The Standard tier was exactly as promised",
-    body: "The item count was correct, my no-earrings exclusion was followed, and both surprise gifts were lovely.",
+    title: "The Medium Scoop was exactly as promised",
+    body: "The basic and premium item counts were correct, and my no-earrings exclusion was followed.",
     verified: true,
     created_at: new Date().toISOString(),
   },

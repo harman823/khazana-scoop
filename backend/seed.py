@@ -16,9 +16,9 @@ PRODUCTS = [
         "price": 999,
         "image": "/assets/khazana-product-hero.png",
         "variants": [
-            {"id": "small", "name": "Budget Scoop", "tier": "budget", "itemCount": "7 products + 1 surprise gift", "minItems": 7, "maxItems": 7, "surpriseGiftCount": 1, "rulesJson": json.dumps(["At least 3 categories", "One stationery item guaranteed", "Exclusions accepted"]), "price": 549, "compareAtPrice": 649, "badge": "Budget", "line": "A cheerful first scoop", "sortOrder": 1},
-            {"id": "medium", "name": "Standard Scoop", "tier": "standard", "itemCount": "12 products + 2 surprise gifts", "minItems": 12, "maxItems": 12, "surpriseGiftCount": 2, "rulesJson": json.dumps(["At least 4 categories", "Two stationery or accessory picks", "Exclusions accepted"]), "price": 999, "compareAtPrice": 1199, "badge": "Best Value", "line": "Our most balanced mix", "isDefault": True, "sortOrder": 2},
-            {"id": "large", "name": "Premium Scoop", "tier": "premium", "itemCount": "20 products + 3 surprise gifts", "minItems": 20, "maxItems": 20, "surpriseGiftCount": 3, "rulesJson": json.dumps(["At least 5 categories", "Premium gift-ready packing", "Priority preference matching"]), "price": 1499, "compareAtPrice": 1799, "badge": "Premium", "line": "For gifting or a big haul", "sortOrder": 3},
+            {"id": "small", "name": "Small Scoop", "tier": "budget", "itemCount": "7 basic items + 2 premium items", "minItems": 9, "maxItems": 9, "surpriseGiftCount": 0, "rulesJson": json.dumps(["Includes 7 basic items", "Includes 2 premium items"]), "price": 549, "compareAtPrice": 649, "badge": "Small", "line": "A cheerful first scoop", "sortOrder": 1},
+            {"id": "medium", "name": "Medium Scoop", "tier": "standard", "itemCount": "12 basic items + 3 premium items", "minItems": 15, "maxItems": 15, "surpriseGiftCount": 0, "rulesJson": json.dumps(["Includes 12 basic items", "Includes 3 premium items"]), "price": 999, "compareAtPrice": 1199, "badge": "Medium", "line": "Our most balanced mix", "isDefault": True, "sortOrder": 2},
+            {"id": "large", "name": "Large Scoop", "tier": "premium", "itemCount": "15 basic items + 5 premium items", "minItems": 20, "maxItems": 20, "surpriseGiftCount": 0, "rulesJson": json.dumps(["Includes 15 basic items", "Includes 5 premium items"]), "price": 1499, "compareAtPrice": 1799, "badge": "Large", "line": "For gifting or a big haul", "sortOrder": 3},
         ],
     },
     {
@@ -31,9 +31,9 @@ PRODUCTS = [
         "price": 1199,
         "image": "/assets/khazana-product-hero.png",
         "variants": [
-            {"id": "byo-small", "name": "Budget BYO", "tier": "budget", "itemCount": "8 items + 1 surprise gift", "minItems": 8, "maxItems": 8, "surpriseGiftCount": 1, "rulesJson": json.dumps(["Choose up to 2 preferred categories", "Exclude up to 2 categories"]), "price": 699, "badge": "Simple", "line": "A few favourites", "sortOrder": 1},
-            {"id": "byo-medium", "name": "Standard BYO", "tier": "standard", "itemCount": "14 items + 2 surprise gifts", "minItems": 14, "maxItems": 14, "surpriseGiftCount": 2, "rulesJson": json.dumps(["Choose up to 4 preferred categories", "Colour and occasion matching"]), "price": 1199, "badge": "Balanced", "line": "More category variety", "isDefault": True, "sortOrder": 2},
-            {"id": "byo-large", "name": "Premium BYO", "tier": "premium", "itemCount": "22 items + 3 surprise gifts", "minItems": 22, "maxItems": 22, "surpriseGiftCount": 3, "rulesJson": json.dumps(["Choose up to 6 preferred categories", "Priority preference matching", "Gift-ready premium packing"]), "price": 1699, "badge": "Gift Box", "line": "A generous custom bundle", "sortOrder": 3},
+            {"id": "byo-small", "name": "Small Scoop", "tier": "budget", "itemCount": "7 basic items + 2 premium items", "minItems": 9, "maxItems": 9, "surpriseGiftCount": 0, "rulesJson": json.dumps(["Includes 7 basic items", "Includes 2 premium items"]), "price": 699, "badge": "Small", "line": "A few favourites", "sortOrder": 1},
+            {"id": "byo-medium", "name": "Medium Scoop", "tier": "standard", "itemCount": "12 basic items + 3 premium items", "minItems": 15, "maxItems": 15, "surpriseGiftCount": 0, "rulesJson": json.dumps(["Includes 12 basic items", "Includes 3 premium items"]), "price": 1199, "badge": "Medium", "line": "More category variety", "isDefault": True, "sortOrder": 2},
+            {"id": "byo-large", "name": "Large Scoop", "tier": "premium", "itemCount": "15 basic items + 5 premium items", "minItems": 20, "maxItems": 20, "surpriseGiftCount": 0, "rulesJson": json.dumps(["Includes 15 basic items", "Includes 5 premium items"]), "price": 1699, "badge": "Large", "line": "A generous custom bundle", "sortOrder": 3},
         ],
     },
 ]
@@ -68,18 +68,6 @@ PROMOTIONS = [
         "minSubtotal": 499,
         "automatic": True,
         "bannerPlacement": "top",
-    },
-    {
-        "id": "desk-duo",
-        "name": "Desk Duo",
-        "title": "Desk Duo: save ₹49",
-        "message": "Pair the Pastel Gel Pen Set with the Sticker & Note Pack and save ₹49 automatically.",
-        "promotionType": "combo",
-        "discountType": "fixed",
-        "discountValue": 49,
-        "automatic": True,
-        "bannerPlacement": "catalog",
-        "productIds": ["pen", "stickers"],
     },
 ]
 
