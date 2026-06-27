@@ -93,8 +93,7 @@ function Storefront() {
   const [isLoading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderNote, setOrderNote] = useState("");
-  const [category, setCategory] = useState("All");
-  const [sortMode, setSortMode] = useState("featured");
+
   const [isCartOpen, setCartOpen] = useState(false);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -115,14 +114,7 @@ function Storefront() {
   const mysteryProduct = products.find((product) => product.product_type === "mystery_scoop");
   const byoProduct = products.find((product) => product.product_type === "build_your_own");
   const featuredScoops = [mysteryProduct, byoProduct].filter(Boolean) as Product[];
-  const individualProducts = products.filter((product) => product.product_type === "individual");
-  const categories = useMemo(() => ["All", ...Array.from(new Set(individualProducts.map((product) => product.category)))], [individualProducts]);
-  const visibleProducts = useMemo(() => {
-    let next = individualProducts.filter((product) => category === "All" || product.category === category);
-    if (sortMode === "low") next = [...next].sort((a, b) => a.price - b.price);
-    if (sortMode === "high") next = [...next].sort((a, b) => b.price - a.price);
-    return next;
-  }, [category, individualProducts, sortMode]);
+
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal === 0 || subtotal >= 499 ? 0 : 49;
@@ -218,20 +210,13 @@ function Storefront() {
           </div>
         </section>
 
-        <section className="section" id="collection">
-          <div className="section-heading"><h2>Cute Essentials</h2><p>Browse fixed products when you want to choose the exact little happy find.</p></div>
-          <div className="filter-row">
-            <div className="chips">{categories.map((item) => <button className={`chip ${category === item ? "active" : ""}`} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div>
-            <select value={sortMode} onChange={(event) => setSortMode(event.target.value)} aria-label="Sort products"><option value="featured">Featured</option><option value="low">Price low to high</option><option value="high">Price high to low</option></select>
-          </div>
-          <div className="product-grid">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} onAdd={() => addToCart(product, null)} />)}</div>
-        </section>
+
         <ReviewsAndFaq />
       </main>}
 
       <CartDrawer isOpen={isCartOpen} cart={cart} orderNote={orderNote} subtotal={subtotal} shipping={shipping} total={total} onClose={() => setCartOpen(false)} onNote={setOrderNote} onQuantity={updateQuantity} onCheckout={() => cart.length ? setCheckoutOpen(true) : setToast("Add an item before checkout")} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setCheckoutOpen(false)} onSubmit={(customer) => void submitCheckout(customer)} />
-      <footer className="footer"><div><strong>KhazanaScoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><Link to="/products/mystery-scoop">Mystery Scoops</Link><Link to="/products/build-your-own-scoop">Build Your Scoop</Link><a href="#collection">Cute Essentials</a></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
+      <footer className="footer"><div><strong>KhazanaScoop</strong><p>Cute mystery boxes, organized ordering, careful packing.</p></div><div><strong>Shop</strong><Link to="/products/mystery-scoop">Mystery Scoops</Link><Link to="/products/build-your-own-scoop">Build Your Scoop</Link></div><div><strong>Help</strong><a href="#faq">FAQ</a><Link to="/admin">Admin Login</Link><a href="#home">Contact Us</a></div></footer>
       <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
     </>
   );
@@ -420,10 +405,6 @@ function OrderSummary({ order }: { order: Order }) {
 
 function InventorySummary({ item }: { item: InventoryItem }) {
   return <div className="inventory-row"><strong>{item.name}</strong><span>{item.stock} units</span><span className={`tag ${item.stock <= item.low_stock_at ? "danger" : ""}`}>{item.stock <= item.low_stock_at ? "Low" : "OK"}</span></div>;
-}
-
-function ProductCard({ product, onAdd }: { product: Product; onAdd: () => void }) {
-  return <article className="product-card"><Link to={`/products/${product.slug}`} className="product-card-link"><div className="product-art" style={{ "--art-bg": product.color ?? "#E4FFFA" } as CSSProperties} aria-hidden="true">{product.image ? <img src={product.image} alt="" /> : product.icon}</div><h3>{product.name}</h3><p>{product.category}</p></Link><div className="row"><strong>{money.format(product.price)}</strong><button className="button primary" onClick={onAdd}>Add</button></div></article>;
 }
 
 function VariantGrid({ variants, selectedId, onSelect }: { variants: Variant[]; selectedId: string; onSelect: (id: string) => void }) {

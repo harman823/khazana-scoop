@@ -21,17 +21,26 @@ const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR
 const CART_KEY = "khazanascoopCustomerCart";
 const PROFILE_KEY = "khazanascoopCustomerProfile";
 type ByoItemGroup = "basicItems" | "premiumItems" | "giftHampers";
-type ByoPreferences = {
+interface ByoPreferences {
   colour: string;
-  occasion: string;
   basicItems: string[];
   premiumItems: string[];
   giftHampers: string[];
 };
-const defaultByoPreferences: ByoPreferences = { colour: "Neutral surprise", occasion: "Self-care", basicItems: [], premiumItems: [], giftHampers: [] };
-const byoBasicItemOptions = ["Stationery", "Cute Pens", "Stickers & Notes", "Mini Hair Clips", "Scrunchies", "Pocket Mirrors", "Keychains & Charms", "Beauty Minis", "Memo Pads", "Bookmarks", "Washi Tapes", "Phone Charms", "Hair Ties", "Erasers", "Mini Plush"];
+const defaultByoPreferences: ByoPreferences = { colour: "Neutral surprise", basicItems: [], premiumItems: [], giftHampers: [] };
+const byoBasicItemOptions = ["Stickers (Sheet)", "Mini Notebook", "Cute Pen", "Keychain", "Washi Tape", "Enamel Pin", "Bookmarks (Set of 3)", "Highlighter", "Sticky Notes", "Eraser Set"];
 const byoPremiumItemOptions = ["Premium Journal", "Premium Bracelet", "Korean Hair Claw", "Charm Keychain Set", "Beauty Combo", "Desk Organizer", "Mini Perfume", "Satin Scrunchie Set", "Gift Pouch", "Premium Stationery Set"];
 const giftHamperOptions = ["Birthday hamper", "Best friend hamper", "Self-care hamper", "Stationery hamper", "Pink theme hamper", "Pastel theme hamper", "Beauty mini hamper", "Desk essentials hamper"];
+const hamperDetails: Record<string, string> = {
+  "Birthday hamper": "Includes birthday card, confetti, candles, and party-themed mini gifts.",
+  "Best friend hamper": "Includes matching friendship bracelets, cute notes, and aesthetic shared items.",
+  "Self-care hamper": "Includes face masks, bath salts, scented candles, and cozy essentials.",
+  "Stationery hamper": "Includes premium notebooks, pens, highlighters, and sticky notes.",
+  "Pink theme hamper": "Includes all pink items: scrunchies, pens, cute clips, and accessories.",
+  "Pastel theme hamper": "Includes soft pastel-coloured accessories, stationery, and mini gifts.",
+  "Beauty mini hamper": "Includes lip gloss, mini perfume, hair claws, and skincare samples.",
+  "Desk essentials hamper": "Includes desk organizers, aesthetic pens, sticky notes, and cable ties."
+};
 const byoTierLimits: Record<string, { basic: number; premium: number; label: string }> = {
   budget: { basic: 7, premium: 2, label: "Small Scoop" },
   standard: { basic: 12, premium: 3, label: "Medium Scoop" },
@@ -204,14 +213,14 @@ export function CatalogPage() {
   function setCategory(category: string) {
     const next = new URLSearchParams(params);
     next.delete("category");
-    if (category !== "All") next.set("category", category);
+    if (category !== "All") next.set(category, category);
     setParams(next);
   }
 
   return <StoreLayout>
     <section className="catalog-page cute-essentials-page">
       <Breadcrumbs items={[{ label: "Shop" }]} />
-      <div className="catalog-heading cute-essentials-heading"><div><h1>Cute Essentials</h1></div><p>Browse fixed products when you want to choose the exact little happy find.</p></div>
+      <div className="catalog-heading cute-essentials-heading"><div><h1>Cute Essentials</h1></div></div>
       <div className="collection-tools"><div className="chips">{collectionCategories.map((item) => <button className={`chip ${(!categoriesSelected.length && item === "All") || categoriesSelected.includes(item) ? "active" : ""}`} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><select value={sort} onChange={(event) => setParam("sort", event.target.value)} aria-label="Sort products"><option value="featured">Featured</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option><option value="name">Name</option></select></div>
       {isLoading ? <ProductSkeletonGrid /> : visible.length ? <div className="catalog-grid cute-essentials-grid">{visible.map((product) => <CatalogCard product={product} key={product.id} />)}</div> : <div className="empty-state"><Search /><h2>No cute finds matched</h2><p>Try another category or search for a different product.</p><button onClick={() => setParams({})}>View all products</button></div>}
     </section>
@@ -251,7 +260,6 @@ export function ProductDetailPage() {
   const premiumLimitReached = byoPreferences.premiumItems.length >= byoLimits.premium;
   const byoPreferencePayload: Record<string, string> = isBuildYourOwn ? {
     colour: byoPreferences.colour,
-    occasion: byoPreferences.occasion,
     scoop_size: byoLimits.label,
     basic_items: byoPreferences.basicItems.join(", ") || "None selected",
     premium_items: byoPreferences.premiumItems.join(", ") || "None selected",
@@ -296,7 +304,7 @@ export function ProductDetailPage() {
           <p className="stock-line">In stock and ready to pack</p><p className="detail-description">{currentProduct.description}</p>
           {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}</button>)}</div> : null}
           {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.item_count}.</p></div> : null}
-          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="preference-select-row"><label>Colour mood<select value={byoPreferences.colour} onChange={(event) => setByoPreferences((current) => ({ ...current, colour: event.target.value }))}><option>Neutral surprise</option><option>Pastel mix</option><option>Pink and cute</option><option>Blue and mint</option><option>Lavender</option></select></label><label>Occasion<select value={byoPreferences.occasion} onChange={(event) => setByoPreferences((current) => ({ ...current, occasion: event.target.value }))}><option>Self-care</option><option>Birthday</option><option>Gifting</option><option>School or college</option><option>Just because</option></select></label></div><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{byoPreferences.basicItems.length}/{byoLimits.basic} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset><legend>Basic items</legend><p className="selection-count">Choose up to {byoLimits.basic}</p>{byoBasicItemOptions.map((item) => { const checked = byoPreferences.basicItems.includes(item); const locked = basicLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("basicItems", item, byoLimits.basic)} /> {item}</label>; })}</fieldset><fieldset><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p>{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("premiumItems", item, byoLimits.premium)} /> {item}</label>; })}</fieldset></div><fieldset className="gift-hamper-options"><legend>Gift hampers</legend><p className="selection-count">Optional hamper themes for gifting</p>{giftHamperOptions.map((item) => <label key={item}><input type="checkbox" checked={byoPreferences.giftHampers.includes(item)} onChange={() => toggleByoItem("giftHampers", item)} /> {item}</label>)}</fieldset></div> : null}
+          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="preference-select-row"><label>Colour mood<select value={byoPreferences.colour} onChange={(event) => setByoPreferences((current) => ({ ...current, colour: event.target.value }))}><option>Neutral surprise</option><option>Pastel mix</option><option>Pink and cute</option><option>Blue and mint</option><option>Lavender</option></select></label></div><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{byoPreferences.basicItems.length}/{byoLimits.basic} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset className="basic-items-column"><legend>Basic items</legend><p className="selection-count">Choose up to {byoLimits.basic}</p>{byoBasicItemOptions.map((item) => { const checked = byoPreferences.basicItems.includes(item); const locked = basicLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("basicItems", item, byoLimits.basic)} /> {item}</label>; })}</fieldset><fieldset className="premium-items-column"><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p>{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("premiumItems", item, byoLimits.premium)} /> {item}</label>; })}</fieldset></div><fieldset className="gift-hamper-options"><legend>Gift hampers</legend><p className="selection-count">Optional hamper themes for gifting</p>{giftHamperOptions.map((item) => <label key={item} title={hamperDetails[item]}><input type="checkbox" checked={byoPreferences.giftHampers.includes(item)} onChange={() => toggleByoItem("giftHampers", item)} /> {item}</label>)}</fieldset></div> : null}
           <div className="purchase-row"><div className="quantity-stepper"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus /></button><strong>{quantity}</strong><button onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus /></button></div><button className="add-cart-primary" onClick={add}>{added ? "Added to cart" : "Add to cart"}</button></div>
           <Link className="buy-now" to="/cart" onClick={add}>Buy now</Link>
           <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-5 working days across India.</p></div></div>
