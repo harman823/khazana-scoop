@@ -1,4 +1,6 @@
 import asyncio
+import json
+from datetime import datetime, timedelta, timezone
 
 from backend.db import db
 
@@ -14,9 +16,9 @@ PRODUCTS = [
         "price": 999,
         "image": "/assets/khazana-product-hero.png",
         "variants": [
-            {"id": "small", "name": "Small Scoop", "itemCount": "7-8 products", "price": 549, "badge": "Starter Pick", "line": "Best for first orders"},
-            {"id": "medium", "name": "Medium Scoop", "itemCount": "12-15 products", "price": 999, "badge": "Best Value", "line": "Most loved size", "isDefault": True},
-            {"id": "large", "name": "Large Scoop", "itemCount": "20-22 products", "price": 1499, "badge": "Big Surprise", "line": "For gifting or hauls"},
+            {"id": "small", "name": "Budget Scoop", "tier": "budget", "itemCount": "7 products + 1 surprise gift", "minItems": 7, "maxItems": 7, "surpriseGiftCount": 1, "rulesJson": json.dumps(["At least 3 categories", "One stationery item guaranteed", "Exclusions accepted"]), "price": 549, "compareAtPrice": 649, "badge": "Budget", "line": "A cheerful first scoop", "sortOrder": 1},
+            {"id": "medium", "name": "Standard Scoop", "tier": "standard", "itemCount": "12 products + 2 surprise gifts", "minItems": 12, "maxItems": 12, "surpriseGiftCount": 2, "rulesJson": json.dumps(["At least 4 categories", "Two stationery or accessory picks", "Exclusions accepted"]), "price": 999, "compareAtPrice": 1199, "badge": "Best Value", "line": "Our most balanced mix", "isDefault": True, "sortOrder": 2},
+            {"id": "large", "name": "Premium Scoop", "tier": "premium", "itemCount": "20 products + 3 surprise gifts", "minItems": 20, "maxItems": 20, "surpriseGiftCount": 3, "rulesJson": json.dumps(["At least 5 categories", "Premium gift-ready packing", "Priority preference matching"]), "price": 1499, "compareAtPrice": 1799, "badge": "Premium", "line": "For gifting or a big haul", "sortOrder": 3},
         ],
     },
     {
@@ -29,9 +31,9 @@ PRODUCTS = [
         "price": 1199,
         "image": "/assets/khazana-product-hero.png",
         "variants": [
-            {"id": "byo-small", "name": "Small BYO", "itemCount": "8-9 items", "price": 699, "badge": "Simple", "line": "A few favorites"},
-            {"id": "byo-medium", "name": "Medium BYO", "itemCount": "14-15 items", "price": 1199, "badge": "Balanced", "line": "More category mix", "isDefault": True},
-            {"id": "byo-large", "name": "Large BYO", "itemCount": "22-25 items", "price": 1699, "badge": "Gift Box", "line": "Big custom bundle"},
+            {"id": "byo-small", "name": "Budget BYO", "tier": "budget", "itemCount": "8 items + 1 surprise gift", "minItems": 8, "maxItems": 8, "surpriseGiftCount": 1, "rulesJson": json.dumps(["Choose up to 2 preferred categories", "Exclude up to 2 categories"]), "price": 699, "badge": "Simple", "line": "A few favourites", "sortOrder": 1},
+            {"id": "byo-medium", "name": "Standard BYO", "tier": "standard", "itemCount": "14 items + 2 surprise gifts", "minItems": 14, "maxItems": 14, "surpriseGiftCount": 2, "rulesJson": json.dumps(["Choose up to 4 preferred categories", "Colour and occasion matching"]), "price": 1199, "badge": "Balanced", "line": "More category variety", "isDefault": True, "sortOrder": 2},
+            {"id": "byo-large", "name": "Premium BYO", "tier": "premium", "itemCount": "22 items + 3 surprise gifts", "minItems": 22, "maxItems": 22, "surpriseGiftCount": 3, "rulesJson": json.dumps(["Choose up to 6 preferred categories", "Priority preference matching", "Gift-ready premium packing"]), "price": 1699, "badge": "Gift Box", "line": "A generous custom bundle", "sortOrder": 3},
         ],
     },
 ]
@@ -53,6 +55,32 @@ INVENTORY = [
     {"id": "charms", "name": "Keychains & charms", "category": "Keychains & Charms", "stock": 37, "costPrice": 35, "sellPrice": 119},
     {"id": "beauty", "name": "Beauty minis", "category": "Beauty Minis", "stock": 29, "costPrice": 55, "sellPrice": 169},
     {"id": "mirrors", "name": "Pocket mirrors", "category": "Pocket Mirrors", "stock": 21, "costPrice": 42, "sellPrice": 129},
+]
+
+PROMOTIONS = [
+    {
+        "id": "free-shipping-499",
+        "name": "Free shipping over 499",
+        "title": "Free shipping above ₹499",
+        "message": "Your prepaid order ships free when the cart reaches ₹499.",
+        "promotionType": "free_shipping",
+        "freeShipping": True,
+        "minSubtotal": 499,
+        "automatic": True,
+        "bannerPlacement": "top",
+    },
+    {
+        "id": "desk-duo",
+        "name": "Desk Duo",
+        "title": "Desk Duo: save ₹49",
+        "message": "Pair the Pastel Gel Pen Set with the Sticker & Note Pack and save ₹49 automatically.",
+        "promotionType": "combo",
+        "discountType": "fixed",
+        "discountValue": 49,
+        "automatic": True,
+        "bannerPlacement": "catalog",
+        "productIds": ["pen", "stickers"],
+    },
 ]
 
 
@@ -94,6 +122,23 @@ async def main() -> None:
                     data={"create": item, "update": item},
                 )
 
+            now = datetime.now(timezone.utc)
+            for source_promotion in PROMOTIONS:
+                promotion = {**source_promotion}
+                product_ids = promotion.pop("productIds", [])
+                promotion["startsAt"] = now - timedelta(days=1)
+                promotion["endsAt"] = now + timedelta(days=365)
+                await transaction.promotion.upsert(
+                    where={"id": promotion["id"]},
+                    data={
+                        "create": {
+                            **promotion,
+                            "products": {"create": [{"productId": product_id} for product_id in product_ids]},
+                        },
+                        "update": promotion,
+                    },
+                )
+
             customer = await transaction.customer.upsert(
                 where={"email": "demo@example.com"},
                 data={
@@ -115,6 +160,7 @@ async def main() -> None:
                         "id": "KS-DEMO-1024",
                         "customerId": customer.id,
                         "orderNote": "No earrings, prefer pink stationery.",
+                        "exclusions": "Earrings",
                         "paymentStatus": "paid",
                         "fulfilmentStatus": "packed",
                         "subtotal": 999,
@@ -136,6 +182,22 @@ async def main() -> None:
                                 }
                             ]
                         },
+                    },
+                    "update": {},
+                },
+            )
+
+            await transaction.review.upsert(
+                where={"productId_customerId": {"productId": "mystery-scoop", "customerId": customer.id}},
+                data={
+                    "create": {
+                        "id": "demo-review-mystery",
+                        "productId": "mystery-scoop",
+                        "customerId": customer.id,
+                        "rating": 5,
+                        "title": "Thoughtful and genuinely fun",
+                        "body": "The exclusions were followed and the item count matched the selected tier.",
+                        "verified": True,
                     },
                     "update": {},
                 },

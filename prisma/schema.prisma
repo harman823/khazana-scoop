@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Product {
@@ -25,44 +26,64 @@ model Product {
   updatedAt   DateTime    @updatedAt
   variants    Variant[]
   orderItems  OrderItem[]
+  reviews     Review[]
+  promotions  PromotionProduct[]
 
   @@index([productType, status])
   @@index([category, status])
+  @@index([color, status])
+  @@index([price, status])
 }
 
 model Variant {
-  id        String   @id
-  productId String
-  name      String
-  itemCount String
-  price     Int
-  badge     String?
-  line      String?
-  isDefault Boolean  @default(false)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id                String   @id
+  productId         String
+  name              String
+  tier              String
+  itemCount         String
+  minItems          Int
+  maxItems          Int
+  surpriseGiftCount Int      @default(0)
+  rulesJson         String   @default("[]")
+  price             Int
+  compareAtPrice    Int?
+  badge             String?
+  line              String?
+  isDefault         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([productId, sortOrder])
 }
 
 model Customer {
-  id        String   @id
-  name      String
-  phone     String
-  email     String   @unique
-  address   String
-  createdAt DateTime @default(now())
-  orders    Order[]
+  id           String   @id
+  authUserId   String?  @unique
+  name         String
+  phone        String
+  email        String   @unique
+  address      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+  reviews      Review[]
+
+  @@index([authUserId])
 }
 
 model Order {
   id                String      @id
   customerId        String
   orderNote         String      @default("")
+  exclusions        String      @default("")
   paymentStatus     String      @default("paid")
   fulfilmentStatus  String      @default("unfulfilled")
   subtotal          Int
+  discountTotal     Int         @default(0)
   shippingFee       Int
   total             Int
+  promotionCode     String?
   trackingNumber    String      @default("")
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -72,6 +93,7 @@ model Order {
   @@index([customerId, createdAt])
   @@index([paymentStatus, createdAt])
   @@index([fulfilmentStatus, createdAt])
+  @@index([promotionCode])
 }
 
 model OrderItem {
@@ -106,4 +128,59 @@ model InventoryItem {
 
   @@index([category, status])
   @@index([stock])
+}
+
+model Promotion {
+  id              String             @id
+  name            String
+  title           String
+  message         String
+  code            String?            @unique
+  promotionType   String
+  discountType    String             @default("none")
+  discountValue   Int                @default(0)
+  minSubtotal     Int                @default(0)
+  freeShipping    Boolean            @default(false)
+  automatic       Boolean            @default(true)
+  bannerPlacement String             @default("top")
+  startsAt        DateTime
+  endsAt          DateTime?
+  status          String             @default("active")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  products        PromotionProduct[]
+
+  @@index([status, startsAt, endsAt])
+  @@index([promotionType, status])
+}
+
+model PromotionProduct {
+  promotionId String
+  productId   String
+  quantity    Int       @default(1)
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, productId])
+  @@index([productId])
+}
+
+model Review {
+  id         String   @id
+  productId  String
+  customerId String
+  rating     Int
+  title      String
+  body       String
+  verified   Boolean  @default(false)
+  status     String   @default("published")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, customerId])
+  @@index([productId, status, createdAt])
+  @@index([customerId, createdAt])
+  @@index([rating])
 }

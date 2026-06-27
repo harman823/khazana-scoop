@@ -1,68 +1,50 @@
-# KhazanaScoop MVP
+# KhazanaScoop
 
-React TypeScript storefront with a Python FastAPI backend and Prisma ORM for the KhazanaScoop ecommerce MVP.
+Production-oriented React + TypeScript storefront with FastAPI, Prisma, PostgreSQL, and Supabase Auth/Storage.
 
-## Run Locally
+## Included
 
-Install dependencies:
+- Budget, Standard, and Premium scoop tiers with exact item counts, surprise gifts, compare-at pricing, and packing rules.
+- Server-side catalog search, category/color/price filtering, and sorting.
+- Checkout notes plus a dedicated exclusions field.
+- Automatic free-shipping, fixed, percentage, and product-combo promotions.
+- Authenticated customer order history and verified product reviews.
+- Supabase PostgreSQL, Auth JWT verification, and an admin-only product asset bucket.
+
+## Supabase setup
+
+1. Create a Supabase project.
+2. Copy `.env.example` to `.env` and replace all project placeholders.
+3. Use the transaction pooler URL for `DATABASE_URL` and the direct/session URL for `DIRECT_URL`.
+4. Run [supabase/setup.sql](supabase/setup.sql) in the Supabase SQL editor to create the product asset bucket and storage policies.
+5. Give store-owner Auth users `app_metadata.role = "admin"` before they upload product assets.
+
+Never expose the service-role key in the Vite frontend. The browser only uses the Supabase anon key.
+
+## Install and deploy the database
 
 ```powershell
 npm install
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+npm run db:generate
+npm run db:deploy
+npm run db:seed
 ```
 
-Create and seed the Prisma SQLite database:
+`db:deploy` applies the committed PostgreSQL migration. `db:seed` creates the catalog, tier rules, demo order/review, inventory, free-shipping offer, and combo offer.
+
+## Run locally
 
 ```powershell
-npm run db:setup
+npm run dev
 ```
 
-Inspect and edit local records with Prisma Studio:
+- Storefront: `http://127.0.0.1:5173`
+- FastAPI: `http://127.0.0.1:8000`
+- Admin: `http://127.0.0.1:5173/admin`
 
-```powershell
-npm run db:studio
-```
-
-After changing `prisma/schema.prisma`, create a migration with:
-
-```powershell
-npm run db:migrate -- --name describe_your_change
-```
-
-Apply committed migrations in a deployed environment with `npm run db:deploy`.
-
-Start the backend:
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
-```
-
-Start the frontend:
-
-```powershell
-npm run dev -- --host 127.0.0.1 --port 5173
-```
-
-Open:
-
-```text
-http://127.0.0.1:5173
-```
-
-Admin:
-
-```text
-http://127.0.0.1:5173/admin
-```
-
-Default MVP password:
-
-```text
-khazana-admin
-```
-
-Change it in `.env` with `ADMIN_PASSWORD`.
+Change `ADMIN_PASSWORD` before deployment. Customer authentication is handled by Supabase; the current admin dashboard password remains a separate owner control.
 
 ## Verification
 
@@ -71,12 +53,10 @@ npm run build
 .\.venv\Scripts\python.exe -m compileall backend
 ```
 
-## MVP Notes
+## Production notes
 
-- Products, variants, customers, orders, and inventory are stored in SQLite through Prisma ORM.
-- FastAPI opens and closes Prisma through its application lifespan.
-- Checkout and seed writes run in database transactions; returning customers are matched by email.
-- Checkout simulates prepaid verification and creates a paid order for admin fulfilment.
-- Admin has protected routes for overview, orders, inventory, products, customers, and analytics.
-- Admin can update order status, tracking number, inventory stock/cost/sell price/status, and create products.
-- Razorpay payment verification, hashed/admin-user authentication, and deployment database hardening are the next production steps.
+- FastAPI verifies Supabase access tokens using project JWKS (or `SUPABASE_JWT_SECRET` for a legacy HS256 project).
+- Authenticated checkout links `auth.users.id` to the public `Customer.authUserId` field.
+- Order history requires authentication by default. Set `ALLOW_GUEST_ORDER_LOOKUP=true` only if email-only lookup is intentionally desired.
+- Promotion eligibility and order totals are recalculated on the server; frontend prices are never trusted.
+- Add a real payment provider/webhook before accepting live payments. The checkout route still marks the current prepaid simulation as paid.

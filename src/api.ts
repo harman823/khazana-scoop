@@ -1,7 +1,9 @@
-import type { AdminStats, CartItem, Customer, InventoryItem, Order, Product, ProductType } from "./types";
-import { demoInventory, demoOrder, demoProducts } from "./demoData";
+import type { AdminStats, CartItem, CatalogQuery, Customer, InventoryItem, Order, Product, ProductType, Promotion, Review } from "./types";
+import { demoInventory, demoOrder, demoProducts, demoPromotions, demoReviews } from "./demoData";
+import { getSession, isSupabaseConfigured } from "./supabase";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const DEMO_FALLBACK = import.meta.env.VITE_ENABLE_DEMO_FALLBACK === "true" || !isSupabaseConfigured;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -17,8 +19,37 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getProducts() {
-  return request<Product[]>("/api/products").catch(() => demoProducts);
+async function customerInit(): Promise<RequestInit> {
+  const session = await getSession();
+  return session ? { headers: { Authorization: `Bearer ${session.access_token}` } } : {};
+}
+
+export function getProducts(query: CatalogQuery = {}) {
+  const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  if (query.product_type) params.set("product_type", query.product_type);
+  query.categories?.forEach((category) => params.append("categories", category));
+  query.colors?.forEach((color) => params.append("colors", color));
+  if (query.min_price != null) params.set("min_price", String(query.min_price));
+  if (query.max_price != null) params.set("max_price", String(query.max_price));
+  if (query.sort) params.set("sort", query.sort);
+  const suffix = params.size ? `?${params}` : "";
+  return request<Product[]>(`/api/products${suffix}`).catch(() => {
+    let products = [...demoProducts];
+    if (query.q) {
+      const needle = query.q.toLowerCase();
+      products = products.filter((product) => `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(needle));
+    }
+    if (query.product_type) products = products.filter((product) => product.product_type === query.product_type);
+    if (query.categories?.length) products = products.filter((product) => query.categories!.includes(product.category));
+    if (query.colors?.length) products = products.filter((product) => product.color && query.colors!.includes(product.color));
+    if (query.min_price != null) products = products.filter((product) => product.price >= query.min_price!);
+    if (query.max_price != null) products = products.filter((product) => product.price <= query.max_price!);
+    if (query.sort === "price-low") products.sort((a, b) => a.price - b.price);
+    if (query.sort === "price-high") products.sort((a, b) => b.price - a.price);
+    if (query.sort === "name") products.sort((a, b) => a.name.localeCompare(b.name));
+    return products;
+  });
 }
 
 export function getProduct(slug: string) {
@@ -29,18 +60,25 @@ export function getProduct(slug: string) {
   });
 }
 
-export function getMyOrders(email: string) {
-  return request<Order[]>(`/api/my-orders?email=${encodeURIComponent(email)}`).catch(() =>
-    readDemoOrders().filter((order) => order.customer.email.toLowerCase() === email.toLowerCase()),
-  );
+export async function getMyOrders(email = "") {
+  const auth = await customerInit();
+  const suffix = email ? `?email=${encodeURIComponent(email)}` : "";
+  return request<Order[]>(`/api/my-orders${suffix}`, auth).catch((error) => {
+    if (!DEMO_FALLBACK) throw error;
+    return readDemoOrders().filter((order) => !email || order.customer.email.toLowerCase() === email.toLowerCase());
+  });
 }
 
-export function createCheckout(customer: Customer, items: CartItem[], orderNote: string) {
+export async function createCheckout(customer: Customer, items: CartItem[], orderNote: string, exclusions = "", promotionCode = "") {
+  const auth = await customerInit();
   return request<Order>("/api/checkout", {
+    ...auth,
     method: "POST",
     body: JSON.stringify({
       customer,
       order_note: orderNote,
+      exclusions,
+      promotion_code: promotionCode || null,
       items: items.map((item) => ({
         product_id: item.product_id,
         variant_id: item.variant_id,
@@ -48,23 +86,46 @@ export function createCheckout(customer: Customer, items: CartItem[], orderNote:
         preferences: item.preferences,
       })),
     }),
-  }).catch(() => {
+  }).catch((error) => {
+    if (!DEMO_FALLBACK) throw error;
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const order: Order = {
       id: `KS-${Date.now().toString().slice(-8)}`,
       customer,
       items: items.map(({ localId: _localId, ...item }) => item),
       order_note: orderNote,
+      exclusions,
       payment_status: "paid",
       fulfilment_status: "unfulfilled",
       subtotal,
+      discount_total: 0,
       shipping_fee: subtotal >= 499 ? 0 : 49,
       total: subtotal + (subtotal >= 499 ? 0 : 49),
+      promotion_code: null,
       tracking_number: "",
       created_at: new Date().toISOString(),
     };
     saveDemoOrders([order, ...readDemoOrders()]);
     return order;
+  });
+}
+
+export function getPromotions() {
+  return request<Promotion[]>("/api/promotions").catch(() => demoPromotions);
+}
+
+export function getReviews(productId: string) {
+  return request<Review[]>(`/api/products/${encodeURIComponent(productId)}/reviews`).catch(() =>
+    demoReviews.filter((review) => review.product_id === productId),
+  );
+}
+
+export async function createReview(productId: string, body: Pick<Review, "rating" | "title" | "body">) {
+  const auth = await customerInit();
+  return request<Review>(`/api/products/${encodeURIComponent(productId)}/reviews`, {
+    ...auth,
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 
@@ -141,6 +202,7 @@ export function createAdminProduct(product: {
   badge?: string;
   icon?: string;
   color?: string;
+  image?: string;
   status?: string;
 }) {
   return request<Product>("/api/admin/products", {
@@ -151,6 +213,8 @@ export function createAdminProduct(product: {
     id: `product-${Date.now()}`,
     ...product,
     status: product.status ?? "active",
+    average_rating: 0,
+    review_count: 0,
     variants: [],
   }));
 }

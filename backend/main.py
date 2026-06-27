@@ -1,13 +1,16 @@
 import json
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Annotated, Any
 from uuid import uuid4
 
+import jwt
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from jwt import PyJWKClient
 from pydantic import BaseModel, EmailStr, Field
-from dotenv import load_dotenv
 from prisma.errors import RecordNotFoundError, UniqueViolationError
 
 try:
@@ -17,25 +20,44 @@ except ModuleNotFoundError:
 
 load_dotenv()
 
-app = FastAPI(title="KhazanaScoop MVP API", version="0.3.0", lifespan=lifespan)
-
+app = FastAPI(title="KhazanaScoop API", version="1.0.0", lifespan=lifespan)
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "khazana-admin")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+SUPABASE_JWT_AUDIENCE = os.getenv("SUPABASE_JWT_AUDIENCE", "authenticated")
 admin_tokens: set[str] = set()
+jwks_client = PyJWKClient(f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json", cache_keys=True) if SUPABASE_URL else None
+
+
+class AuthUser(BaseModel):
+    id: str
+    email: EmailStr
 
 
 class VariantOut(BaseModel):
     id: str
     name: str
+    tier: str
     item_count: str
+    min_items: int
+    max_items: int
+    surprise_gift_count: int = 0
+    rules: list[str] = Field(default_factory=list)
     price: int
+    compare_at_price: int | None = None
     badge: str | None = None
     line: str | None = None
     is_default: bool = False
@@ -54,6 +76,8 @@ class ProductOut(BaseModel):
     icon: str | None = None
     color: str | None = None
     status: str = "active"
+    average_rating: float = 0
+    review_count: int = 0
     variants: list[VariantOut] = Field(default_factory=list)
 
 
@@ -88,7 +112,9 @@ class CustomerIn(BaseModel):
 class CheckoutIn(BaseModel):
     customer: CustomerIn
     items: list[CartItemIn]
-    order_note: str = ""
+    order_note: str = Field(default="", max_length=2000)
+    exclusions: str = Field(default="", max_length=1000)
+    promotion_code: str | None = None
 
 
 class LoginIn(BaseModel):
@@ -124,11 +150,14 @@ class OrderOut(BaseModel):
     customer: CustomerOut
     items: list[OrderItemOut]
     order_note: str
+    exclusions: str
     payment_status: str
     fulfilment_status: str
     subtotal: int
+    discount_total: int
     shipping_fee: int
     total: int
+    promotion_code: str | None = None
     tracking_number: str
     created_at: datetime
 
@@ -166,6 +195,58 @@ class AdminStatsOut(BaseModel):
     low_stock_items: int
 
 
+class PromotionOut(BaseModel):
+    id: str
+    name: str
+    title: str
+    message: str
+    code: str | None = None
+    promotion_type: str
+    discount_type: str
+    discount_value: int
+    min_subtotal: int
+    free_shipping: bool
+    automatic: bool
+    banner_placement: str
+    starts_at: datetime
+    ends_at: datetime | None = None
+    product_ids: list[str] = Field(default_factory=list)
+
+
+class PromotionIn(BaseModel):
+    name: str
+    title: str
+    message: str
+    code: str | None = None
+    promotion_type: str
+    discount_type: str = "none"
+    discount_value: int = Field(default=0, ge=0)
+    min_subtotal: int = Field(default=0, ge=0)
+    free_shipping: bool = False
+    automatic: bool = True
+    banner_placement: str = "top"
+    starts_at: datetime
+    ends_at: datetime | None = None
+    product_ids: list[str] = Field(default_factory=list)
+
+
+class ReviewOut(BaseModel):
+    id: str
+    product_id: str
+    customer_name: str
+    rating: int
+    title: str
+    body: str
+    verified: bool
+    created_at: datetime
+
+
+class ReviewIn(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    title: str = Field(min_length=2, max_length=100)
+    body: str = Field(min_length=5, max_length=1000)
+
+
 def require_admin(authorization: str = Header(default="")) -> str:
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or token not in admin_tokens:
@@ -173,7 +254,57 @@ def require_admin(authorization: str = Header(default="")) -> str:
     return token
 
 
-def product_to_out(product) -> ProductOut:
+def decode_supabase_token(token: str) -> AuthUser:
+    if not SUPABASE_URL:
+        raise HTTPException(status_code=503, detail="Supabase authentication is not configured")
+    try:
+        if SUPABASE_JWT_SECRET:
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256"],
+                audience=SUPABASE_JWT_AUDIENCE,
+            )
+        else:
+            if jwks_client is None:
+                raise HTTPException(status_code=503, detail="Supabase authentication is not configured")
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256", "ES256"],
+                audience=SUPABASE_JWT_AUDIENCE,
+            )
+        return AuthUser(id=payload["sub"], email=payload["email"])
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired session") from exc
+
+
+def optional_user(authorization: str = Header(default="")) -> AuthUser | None:
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return None
+    return decode_supabase_token(token)
+
+
+def require_user(user: Annotated[AuthUser | None, Depends(optional_user)]) -> AuthUser:
+    if user is None:
+        raise HTTPException(status_code=401, detail="Sign in required")
+    return user
+
+
+def safe_json_list(value: str | None) -> list[str]:
+    try:
+        parsed = json.loads(value or "[]")
+        return [str(item) for item in parsed] if isinstance(parsed, list) else []
+    except json.JSONDecodeError:
+        return []
+
+
+def product_to_out(product, review_stats: tuple[float, int] = (0, 0)) -> ProductOut:
+    average, count = review_stats
     return ProductOut(
         id=product.id,
         name=product.name,
@@ -187,17 +318,25 @@ def product_to_out(product) -> ProductOut:
         icon=product.icon,
         color=product.color,
         status=product.status,
+        average_rating=average,
+        review_count=count,
         variants=[
             VariantOut(
                 id=variant.id,
                 name=variant.name,
+                tier=variant.tier,
                 item_count=variant.itemCount,
+                min_items=variant.minItems,
+                max_items=variant.maxItems,
+                surprise_gift_count=variant.surpriseGiftCount,
+                rules=safe_json_list(variant.rulesJson),
                 price=variant.price,
+                compare_at_price=variant.compareAtPrice,
                 badge=variant.badge,
                 line=variant.line,
                 is_default=variant.isDefault,
             )
-            for variant in (product.variants or [])
+            for variant in sorted(product.variants or [], key=lambda item: item.sortOrder)
         ],
     )
 
@@ -231,11 +370,14 @@ def order_to_out(order) -> OrderOut:
             for item in (order.items or [])
         ],
         order_note=order.orderNote,
+        exclusions=order.exclusions,
         payment_status=order.paymentStatus,
         fulfilment_status=order.fulfilmentStatus,
         subtotal=order.subtotal,
+        discount_total=order.discountTotal,
         shipping_fee=order.shippingFee,
         total=order.total,
+        promotion_code=order.promotionCode,
         tracking_number=order.trackingNumber,
         created_at=order.createdAt,
     )
@@ -255,11 +397,43 @@ def inventory_to_out(item) -> InventoryItemOut:
     )
 
 
-async def resolve_order_item(client, item: CartItemIn) -> dict:
-    product = await client.product.find_unique(where={"id": item.product_id}, include={"variants": True})
-    if product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+def promotion_to_out(promotion) -> PromotionOut:
+    return PromotionOut(
+        id=promotion.id,
+        name=promotion.name,
+        title=promotion.title,
+        message=promotion.message,
+        code=promotion.code,
+        promotion_type=promotion.promotionType,
+        discount_type=promotion.discountType,
+        discount_value=promotion.discountValue,
+        min_subtotal=promotion.minSubtotal,
+        free_shipping=promotion.freeShipping,
+        automatic=promotion.automatic,
+        banner_placement=promotion.bannerPlacement,
+        starts_at=promotion.startsAt,
+        ends_at=promotion.endsAt,
+        product_ids=[entry.productId for entry in (promotion.products or [])],
+    )
 
+
+async def review_stats_by_product(product_ids: list[str]) -> dict[str, tuple[float, int]]:
+    if not product_ids:
+        return {}
+    reviews = await db.review.find_many(where={"productId": {"in": product_ids}, "status": "published"})
+    grouped: dict[str, list[int]] = {}
+    for review in reviews:
+        grouped.setdefault(review.productId, []).append(review.rating)
+    return {
+        product_id: (round(sum(ratings) / len(ratings), 1), len(ratings))
+        for product_id, ratings in grouped.items()
+    }
+
+
+async def resolve_order_item(client, item: CartItemIn) -> dict[str, Any]:
+    product = await client.product.find_unique(where={"id": item.product_id}, include={"variants": True})
+    if product is None or product.status != "active":
+        raise HTTPException(status_code=404, detail="Product not found")
     variant_name = product.category
     item_count = None
     price = product.price
@@ -272,7 +446,6 @@ async def resolve_order_item(client, item: CartItemIn) -> dict:
         price = variant.price
     elif item.variant_id != "standard":
         raise HTTPException(status_code=400, detail=f"Invalid variant for {product.name}")
-
     return {
         "id": uuid4().hex,
         "productId": product.id,
@@ -286,61 +459,212 @@ async def resolve_order_item(client, item: CartItemIn) -> dict:
     }
 
 
+async def active_promotions(client, code: str | None = None):
+    now = datetime.now(timezone.utc)
+    promotions = await client.promotion.find_many(
+        where={"status": "active", "startsAt": {"lte": now}},
+        include={"products": True},
+        order={"startsAt": "desc"},
+    )
+    return [
+        promotion
+        for promotion in promotions
+        if (promotion.endsAt is None or promotion.endsAt >= now)
+        and (promotion.automatic or (code and promotion.code and promotion.code.lower() == code.lower()))
+    ]
+
+
+def calculate_promotions(promotions, items: list[dict[str, Any]], subtotal: int) -> tuple[int, bool, str | None]:
+    quantities: dict[str, int] = {}
+    for item in items:
+        quantities[item["productId"]] = quantities.get(item["productId"], 0) + item["quantity"]
+    best_discount = 0
+    free_shipping = False
+    applied_codes: list[str] = []
+    for promotion in promotions:
+        if subtotal < promotion.minSubtotal:
+            continue
+        if promotion.promotionType == "combo":
+            required = {entry.productId: entry.quantity for entry in promotion.products or []}
+            if not required or any(quantities.get(product_id, 0) < quantity for product_id, quantity in required.items()):
+                continue
+        discount = 0
+        if promotion.discountType == "percentage":
+            discount = subtotal * promotion.discountValue // 100
+        elif promotion.discountType == "fixed":
+            discount = promotion.discountValue
+        best_discount = max(best_discount, min(discount, subtotal))
+        free_shipping = free_shipping or promotion.freeShipping
+        if promotion.code:
+            applied_codes.append(promotion.code)
+        elif promotion.automatic:
+            applied_codes.append(promotion.name)
+    return best_discount, free_shipping, ",".join(applied_codes) or None
+
+
 @app.get("/api/health")
 async def health() -> dict[str, str | bool]:
     await db.product.count()
-    return {
-        "status": "ok",
-        "database": "connected",
-        "orm": "prisma",
-        "connected": db.is_connected(),
-    }
+    return {"status": "ok", "database": "connected", "orm": "prisma", "connected": db.is_connected()}
 
 
 @app.get("/api/products", response_model=list[ProductOut])
-async def get_products(product_type: str | None = None, category: str | None = None) -> list[ProductOut]:
-    where = {}
+async def get_products(
+    q: str | None = None,
+    product_type: str | None = None,
+    categories: list[str] = Query(default=[]),
+    colors: list[str] = Query(default=[]),
+    min_price: int | None = Query(default=None, ge=0),
+    max_price: int | None = Query(default=None, ge=0),
+    sort: str = "featured",
+) -> list[ProductOut]:
+    where: dict[str, Any] = {"status": "active"}
     if product_type:
         where["productType"] = product_type
-    if category:
-        where["category"] = category
-    products = await db.product.find_many(where=where, include={"variants": True}, order={"createdAt": "asc"})
-    return [product_to_out(product) for product in products]
+    if categories:
+        where["category"] = {"in": categories}
+    if colors:
+        where["color"] = {"in": colors}
+    if min_price is not None or max_price is not None:
+        where["price"] = {}
+        if min_price is not None:
+            where["price"]["gte"] = min_price
+        if max_price is not None:
+            where["price"]["lte"] = max_price
+    order = {"price": "asc"} if sort == "price-low" else {"price": "desc"} if sort == "price-high" else {"name": "asc"} if sort == "name" else {"createdAt": "asc"}
+    products = await db.product.find_many(where=where, include={"variants": True}, order=order)
+    if q:
+        needle = q.casefold()
+        products = [
+            product for product in products
+            if needle in f"{product.name} {product.category} {product.description}".casefold()
+        ]
+    stats = await review_stats_by_product([product.id for product in products])
+    return [product_to_out(product, stats.get(product.id, (0, 0))) for product in products]
 
 
 @app.get("/api/products/{slug}", response_model=ProductOut)
 async def get_product(slug: str) -> ProductOut:
     product = await db.product.find_unique(where={"slug": slug}, include={"variants": True})
+    if product is None or product.status != "active":
+        raise HTTPException(status_code=404, detail="Product not found")
+    stats = await review_stats_by_product([product.id])
+    return product_to_out(product, stats.get(product.id, (0, 0)))
+
+
+@app.get("/api/promotions", response_model=list[PromotionOut])
+async def get_promotions() -> list[PromotionOut]:
+    return [promotion_to_out(promotion) for promotion in await active_promotions(db)]
+
+
+@app.get("/api/products/{product_id}/reviews", response_model=list[ReviewOut])
+async def get_reviews(product_id: str) -> list[ReviewOut]:
+    reviews = await db.review.find_many(
+        where={"productId": product_id, "status": "published"},
+        include={"customer": True},
+        order={"createdAt": "desc"},
+    )
+    return [
+        ReviewOut(
+            id=review.id,
+            product_id=review.productId,
+            customer_name=review.customer.name,
+            rating=review.rating,
+            title=review.title,
+            body=review.body,
+            verified=review.verified,
+            created_at=review.createdAt,
+        )
+        for review in reviews
+    ]
+
+
+@app.post("/api/products/{product_id}/reviews", response_model=ReviewOut, status_code=201)
+async def create_review(product_id: str, payload: ReviewIn, user: Annotated[AuthUser, Depends(require_user)]) -> ReviewOut:
+    customer = await db.customer.find_unique(where={"authUserId": user.id})
+    if customer is None:
+        raise HTTPException(status_code=400, detail="Complete a checkout before reviewing")
+    product = await db.product.find_unique(where={"id": product_id})
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product_to_out(product)
-
-
-@app.post("/api/checkout", response_model=OrderOut, status_code=201)
-async def create_checkout(payload: CheckoutIn) -> OrderOut:
-    if not payload.items:
-        raise HTTPException(status_code=400, detail="Cart is empty")
-
-    async with db.tx() as transaction:
-        resolved_items = [await resolve_order_item(transaction, item) for item in payload.items]
-        subtotal = sum(item["price"] * item["quantity"] for item in resolved_items)
-        shipping_fee = 0 if subtotal >= 499 else 49
-
-        customer = await transaction.customer.upsert(
-            where={"email": payload.customer.email},
+    ordered = await db.orderitem.find_first(
+        where={"productId": product_id, "order": {"customerId": customer.id, "paymentStatus": "paid"}}
+    )
+    try:
+        review = await db.review.upsert(
+            where={"productId_customerId": {"productId": product_id, "customerId": customer.id}},
             data={
                 "create": {
                     "id": uuid4().hex,
-                    "name": payload.customer.name,
-                    "phone": payload.customer.phone,
-                    "email": payload.customer.email,
-                    "address": payload.customer.address,
+                    "productId": product_id,
+                    "customerId": customer.id,
+                    "rating": payload.rating,
+                    "title": payload.title,
+                    "body": payload.body,
+                    "verified": ordered is not None,
                 },
                 "update": {
+                    "rating": payload.rating,
+                    "title": payload.title,
+                    "body": payload.body,
+                    "verified": ordered is not None,
+                    "status": "published",
+                },
+            },
+            include={"customer": True},
+        )
+    except UniqueViolationError as exc:
+        raise HTTPException(status_code=409, detail="Review already exists") from exc
+    return ReviewOut(
+        id=review.id,
+        product_id=review.productId,
+        customer_name=review.customer.name,
+        rating=review.rating,
+        title=review.title,
+        body=review.body,
+        verified=review.verified,
+        created_at=review.createdAt,
+    )
+
+
+@app.post("/api/checkout", response_model=OrderOut, status_code=201)
+async def create_checkout(
+    payload: CheckoutIn,
+    user: Annotated[AuthUser | None, Depends(optional_user)],
+) -> OrderOut:
+    if not payload.items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+    if user and user.email.casefold() != str(payload.customer.email).casefold():
+        raise HTTPException(status_code=400, detail="Checkout email must match the signed-in account")
+    async with db.tx() as transaction:
+        resolved_items = [await resolve_order_item(transaction, item) for item in payload.items]
+        subtotal = sum(item["price"] * item["quantity"] for item in resolved_items)
+        promotions = await active_promotions(transaction, payload.promotion_code)
+        discount_total, free_shipping, promotion_code = calculate_promotions(promotions, resolved_items, subtotal)
+        discounted_subtotal = max(0, subtotal - discount_total)
+        shipping_fee = 0 if free_shipping or discounted_subtotal >= 499 else 49
+        existing_customer = await transaction.customer.find_unique(where={"email": str(payload.customer.email)})
+        if existing_customer and existing_customer.authUserId and user is None:
+            raise HTTPException(status_code=401, detail="Sign in to checkout with this account email")
+        customer_update = {
+            "name": payload.customer.name,
+            "phone": payload.customer.phone,
+            "address": payload.customer.address,
+        }
+        if user:
+            customer_update["authUserId"] = user.id
+        customer = await transaction.customer.upsert(
+            where={"email": str(payload.customer.email)},
+            data={
+                "create": {
+                    "id": uuid4().hex,
+                    "authUserId": user.id if user else None,
                     "name": payload.customer.name,
                     "phone": payload.customer.phone,
+                    "email": str(payload.customer.email),
                     "address": payload.customer.address,
                 },
+                "update": customer_update,
             },
         )
         order = await transaction.order.create(
@@ -348,11 +672,14 @@ async def create_checkout(payload: CheckoutIn) -> OrderOut:
                 "id": f"KS-{uuid4().hex[:8].upper()}",
                 "customerId": customer.id,
                 "orderNote": payload.order_note,
+                "exclusions": payload.exclusions,
                 "paymentStatus": "paid",
                 "fulfilmentStatus": "unfulfilled",
                 "subtotal": subtotal,
+                "discountTotal": discount_total,
                 "shippingFee": shipping_fee,
-                "total": subtotal + shipping_fee,
+                "total": discounted_subtotal + shipping_fee,
+                "promotionCode": promotion_code,
                 "items": {"create": resolved_items},
             },
             include={"customer": True, "items": True},
@@ -361,8 +688,16 @@ async def create_checkout(payload: CheckoutIn) -> OrderOut:
 
 
 @app.get("/api/my-orders", response_model=list[OrderOut])
-async def get_my_orders(email: EmailStr = Query()) -> list[OrderOut]:
-    customer = await db.customer.find_unique(where={"email": str(email)})
+async def get_my_orders(
+    user: Annotated[AuthUser | None, Depends(optional_user)],
+    email: EmailStr | None = Query(default=None),
+) -> list[OrderOut]:
+    if user:
+        customer = await db.customer.find_unique(where={"authUserId": user.id})
+    elif email and os.getenv("ALLOW_GUEST_ORDER_LOOKUP", "false").lower() == "true":
+        customer = await db.customer.find_unique(where={"email": str(email)})
+    else:
+        raise HTTPException(status_code=401, detail="Sign in to view orders")
     if customer is None:
         return []
     orders = await db.order.find_many(
@@ -415,8 +750,8 @@ async def update_order(order_id: str, patch: OrderPatch, _: str = Depends(requir
         raise HTTPException(status_code=400, detail="No order fields supplied")
     try:
         order = await db.order.update(where={"id": order_id}, data=data, include={"customer": True, "items": True})
-    except RecordNotFoundError:
-        raise HTTPException(status_code=404, detail="Order not found")
+    except RecordNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Order not found") from exc
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     return order_to_out(order)
@@ -424,8 +759,7 @@ async def update_order(order_id: str, patch: OrderPatch, _: str = Depends(requir
 
 @app.get("/api/admin/inventory", response_model=list[InventoryItemOut])
 async def get_inventory(_: str = Depends(require_admin)) -> list[InventoryItemOut]:
-    inventory = await db.inventoryitem.find_many(order={"name": "asc"})
-    return [inventory_to_out(item) for item in inventory]
+    return [inventory_to_out(item) for item in await db.inventoryitem.find_many(order={"name": "asc"})]
 
 
 @app.patch("/api/admin/inventory/{item_id}", response_model=InventoryItemOut)
@@ -443,8 +777,8 @@ async def update_inventory(item_id: str, patch: InventoryPatch, _: str = Depends
         raise HTTPException(status_code=400, detail="No inventory fields supplied")
     try:
         item = await db.inventoryitem.update(where={"id": item_id}, data=data)
-    except RecordNotFoundError:
-        raise HTTPException(status_code=404, detail="Inventory item not found")
+    except RecordNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Inventory item not found") from exc
     if item is None:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     return inventory_to_out(item)
@@ -453,7 +787,8 @@ async def update_inventory(item_id: str, patch: InventoryPatch, _: str = Depends
 @app.get("/api/admin/products", response_model=list[ProductOut])
 async def get_admin_products(_: str = Depends(require_admin)) -> list[ProductOut]:
     products = await db.product.find_many(include={"variants": True}, order={"createdAt": "asc"})
-    return [product_to_out(product) for product in products]
+    stats = await review_stats_by_product([product.id for product in products])
+    return [product_to_out(product, stats.get(product.id, (0, 0))) for product in products]
 
 
 @app.post("/api/admin/products", response_model=ProductOut, status_code=201)
@@ -476,12 +811,44 @@ async def create_product(payload: ProductUpsertIn, _: str = Depends(require_admi
             },
             include={"variants": True},
         )
-    except UniqueViolationError:
-        raise HTTPException(status_code=409, detail="A product with this slug already exists")
+    except UniqueViolationError as exc:
+        raise HTTPException(status_code=409, detail="A product with this slug already exists") from exc
     return product_to_out(product)
 
 
 @app.get("/api/admin/customers", response_model=list[CustomerOut])
 async def get_customers(_: str = Depends(require_admin)) -> list[CustomerOut]:
-    customers = await db.customer.find_many(order={"createdAt": "desc"})
-    return [customer_to_out(customer) for customer in customers]
+    return [customer_to_out(customer) for customer in await db.customer.find_many(order={"createdAt": "desc"})]
+
+
+@app.get("/api/admin/promotions", response_model=list[PromotionOut])
+async def get_admin_promotions(_: str = Depends(require_admin)) -> list[PromotionOut]:
+    promotions = await db.promotion.find_many(include={"products": True}, order={"startsAt": "desc"})
+    return [promotion_to_out(promotion) for promotion in promotions]
+
+
+@app.post("/api/admin/promotions", response_model=PromotionOut, status_code=201)
+async def create_promotion(payload: PromotionIn, _: str = Depends(require_admin)) -> PromotionOut:
+    promotion = await db.promotion.create(
+        data={
+            "id": uuid4().hex,
+            "name": payload.name,
+            "title": payload.title,
+            "message": payload.message,
+            "code": payload.code,
+            "promotionType": payload.promotion_type,
+            "discountType": payload.discount_type,
+            "discountValue": payload.discount_value,
+            "minSubtotal": payload.min_subtotal,
+            "freeShipping": payload.free_shipping,
+            "automatic": payload.automatic,
+            "bannerPlacement": payload.banner_placement,
+            "startsAt": payload.starts_at,
+            "endsAt": payload.ends_at,
+            "products": {
+                "create": [{"productId": product_id} for product_id in payload.product_ids]
+            },
+        },
+        include={"products": True},
+    )
+    return promotion_to_out(promotion)

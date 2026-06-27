@@ -15,8 +15,9 @@ import {
   Truck,
   X,
 } from "lucide-react";
-import { createCheckout, getMyOrders, getProduct, getProducts } from "./api";
-import type { CartItem, Customer, Order, Product, Variant } from "./types";
+import { createCheckout, createReview, getMyOrders, getProduct, getProducts, getPromotions, getReviews } from "./api";
+import { getUser, isSupabaseConfigured, signIn, signOut, signUp } from "./supabase";
+import type { CartItem, Customer, Order, Product, Promotion, Review, Variant } from "./types";
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const CART_KEY = "khazanascoopCustomerCart";
@@ -72,6 +73,7 @@ function StoreHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [count, setCount] = useState(() => readCart().reduce((sum, item) => sum + item.quantity, 0));
   const [query, setQuery] = useState("");
+  const [banner, setBanner] = useState<Promotion | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,13 +86,19 @@ function StoreHeader() {
     };
   }, []);
 
+  useEffect(() => {
+    void getPromotions().then((promotions) => {
+      setBanner(promotions.find((promotion) => promotion.banner_placement === "top") ?? null);
+    });
+  }, []);
+
   function search(event: FormEvent) {
     event.preventDefault();
     navigate(`/shop?q=${encodeURIComponent(query)}`);
   }
 
   return <>
-    <div className="commerce-announce">Free shipping above ₹499 <span>•</span> Packed with care <span>•</span> Prepaid orders</div>
+    <div className="commerce-announce">{banner?.title ?? "Free shipping above ₹499"} <span>•</span> {banner?.message ?? "Packed with care"} <span>•</span> Prepaid orders</div>
     <header className="commerce-header">
       <button className="commerce-icon mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><Menu /></button>
       <Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link>
@@ -145,37 +153,47 @@ function CatalogCard({ product }: { product: Product }) {
       {product.badge ? <em>{product.badge}</em> : null}
       <button onClick={toggleLike} aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}><Heart fill={liked ? "currentColor" : "none"} /></button>
     </div>
-    <Link className="catalog-copy" to={`/products/${product.slug}`}><small>{product.category}</small><h3>{product.name}</h3><div className="rating"><Star size={14} fill="currentColor" /> 4.8 <span>(24)</span></div></Link>
+    <Link className="catalog-copy" to={`/products/${product.slug}`}><small>{product.category}</small><h3>{product.name}</h3><div className="rating"><Star size={14} fill="currentColor" /> {product.average_rating || "New"} <span>({product.review_count})</span></div></Link>
     <div className="catalog-price"><strong>{money.format(product.price)}</strong><button onClick={() => addProduct(product)}>Add to cart</button></div>
   </article>;
 }
 
 export function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [params, setParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  useEffect(() => { void getProducts().then(setProducts); }, []);
-
-  const categories = useMemo(() => Array.from(new Set(products.map((product) => product.category))).sort(), [products]);
-  const query = (params.get("q") ?? "").toLowerCase();
-  const category = params.get("category") ?? "";
+  const query = params.get("q") ?? "";
+  const categoriesSelected = params.getAll("category");
+  const colorsSelected = params.getAll("color");
   const type = params.get("type") ?? "";
   const sort = params.get("sort") ?? "featured";
-  const max = Number(params.get("max") ?? 0);
+  const minPrice = Number(params.get("min") ?? 0);
+  const maxPrice = Number(params.get("max") ?? 0);
 
-  const visible = useMemo(() => {
-    const filtered = products.filter((product) =>
-      product.status === "active" &&
-      (!query || `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(query)) &&
-      (!category || product.category === category) &&
-      (!type || product.product_type === type) &&
-      (!max || product.price <= max)
-    );
-    if (sort === "price-low") return [...filtered].sort((a, b) => a.price - b.price);
-    if (sort === "price-high") return [...filtered].sort((a, b) => b.price - a.price);
-    if (sort === "name") return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-    return filtered;
-  }, [products, query, category, type, max, sort]);
+  useEffect(() => {
+    void Promise.all([getProducts(), getPromotions()]).then(([catalog, activePromotions]) => {
+      setAllProducts(catalog);
+      setPromotions(activePromotions);
+    });
+  }, []);
+
+  useEffect(() => {
+    void getProducts({
+      q: query || undefined,
+      product_type: type || undefined,
+      categories: categoriesSelected,
+      colors: colorsSelected,
+      min_price: minPrice || undefined,
+      max_price: maxPrice || undefined,
+      sort,
+    }).then(setProducts);
+  }, [params.toString()]);
+
+  const categories = useMemo(() => Array.from(new Set(allProducts.map((product) => product.category))).sort(), [allProducts]);
+  const colors = useMemo(() => Array.from(new Set(allProducts.map((product) => product.color).filter(Boolean) as string[])).sort(), [allProducts]);
+  const visible = products;
 
   function setParam(key: string, value: string) {
     const next = new URLSearchParams(params);
@@ -183,17 +201,27 @@ export function CatalogPage() {
     setParams(next);
   }
 
+  function toggleParam(key: string, value: string) {
+    const next = new URLSearchParams(params);
+    const selected = next.getAll(key);
+    next.delete(key);
+    (selected.includes(value) ? selected.filter((entry) => entry !== value) : [...selected, value]).forEach((entry) => next.append(key, entry));
+    setParams(next);
+  }
+
   return <StoreLayout>
     <section className="catalog-page">
       <Breadcrumbs items={[{ label: "Shop" }]} />
       <div className="catalog-heading"><div><h1>Shop all cute finds</h1><p>Discover stationery, accessories, gifts and scoop-ready favorites.</p></div><span>{visible.length} products</span></div>
+      {promotions.filter((promotion) => promotion.banner_placement === "catalog").map((promotion) => <div className="promo-banner" key={promotion.id}><div><strong>{promotion.title}</strong><p>{promotion.message}</p></div><Link to={`/shop?${Array.from(new Set(promotion.product_ids.map((id) => allProducts.find((product) => product.id === id)?.category).filter(Boolean))).map((category) => `category=${encodeURIComponent(category!)}`).join("&")}`}>Shop the combo</Link></div>)}
       <div className="mobile-catalog-tools"><button onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={18} /> Filters</button><select value={sort} onChange={(event) => setParam("sort", event.target.value)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name</option></select></div>
       <div className="catalog-layout">
         <aside className={`catalog-filters ${filtersOpen ? "open" : ""}`}>
           <div className="filter-title"><strong>Filters</strong><button onClick={() => setFiltersOpen(false)} aria-label="Close filters"><X /></button></div>
           <fieldset><legend>Product type</legend><label><input type="radio" checked={!type} onChange={() => setParam("type", "")} /> All products</label><label><input type="radio" checked={type === "individual"} onChange={() => setParam("type", "individual")} /> Cute essentials</label><label><input type="radio" checked={type === "mystery_scoop"} onChange={() => setParam("type", "mystery_scoop")} /> Mystery scoops</label><label><input type="radio" checked={type === "build_your_own"} onChange={() => setParam("type", "build_your_own")} /> Build your own</label></fieldset>
-          <fieldset><legend>Category</legend><label><input type="radio" checked={!category} onChange={() => setParam("category", "")} /> All categories</label>{categories.map((item) => <label key={item}><input type="radio" checked={category === item} onChange={() => setParam("category", item)} /> {item}</label>)}</fieldset>
-          <fieldset><legend>Price</legend><label><input type="radio" checked={!max} onChange={() => setParam("max", "")} /> Any price</label><label><input type="radio" checked={max === 99} onChange={() => setParam("max", "99")} /> Under ₹99</label><label><input type="radio" checked={max === 199} onChange={() => setParam("max", "199")} /> Under ₹199</label><label><input type="radio" checked={max === 999} onChange={() => setParam("max", "999")} /> Under ₹999</label></fieldset>
+          <fieldset><legend>Category</legend>{categories.map((item) => <label key={item}><input type="checkbox" checked={categoriesSelected.includes(item)} onChange={() => toggleParam("category", item)} /> {item}</label>)}</fieldset>
+          <fieldset><legend>Color</legend><div className="color-filter-grid">{colors.map((item) => <label key={item} title={item}><input type="checkbox" checked={colorsSelected.includes(item)} onChange={() => toggleParam("color", item)} /><span style={{ background: item }} />{item}</label>)}</div></fieldset>
+          <fieldset><legend>Price range</legend><div className="price-filter-row"><label>Min<input type="number" min="0" value={minPrice || ""} onChange={(event) => setParam("min", event.target.value)} placeholder="₹0" /></label><label>Max<input type="number" min="0" value={maxPrice || ""} onChange={(event) => setParam("max", event.target.value)} placeholder="₹2000" /></label></div></fieldset>
           <button className="clear-filters" onClick={() => setParams({})}>Clear all filters</button>
         </aside>
         <div>
@@ -212,11 +240,15 @@ export function ProductDetailPage() {
   const [selectedId, setSelectedId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", body: "" });
+  const [reviewMessage, setReviewMessage] = useState("");
   useEffect(() => {
     void Promise.all([getProduct(slug), getProducts()]).then(([current, all]) => {
       setProduct(current);
-      setSelectedId(current.variants[0]?.id ?? "");
+      setSelectedId(current.variants.find((variant) => variant.is_default)?.id ?? current.variants[0]?.id ?? "");
       setRelated(all.filter((item) => item.id !== current.id && item.category === current.category).slice(0, 4));
+      void getReviews(current.id).then(setReviews);
     });
   }, [slug]);
   if (!product) return <StoreLayout><div className="page-loading">Loading product…</div></StoreLayout>;
@@ -228,6 +260,17 @@ export function ProductDetailPage() {
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   }
+  async function submitReview(event: FormEvent) {
+    event.preventDefault();
+    try {
+      const review = await createReview(currentProduct.id, reviewForm);
+      setReviews((current) => [review, ...current.filter((item) => item.id !== review.id)]);
+      setReviewForm({ rating: 5, title: "", body: "" });
+      setReviewMessage("Thanks — your review is live.");
+    } catch (error) {
+      setReviewMessage(error instanceof Error ? error.message : "Sign in to leave a review.");
+    }
+  }
   return <StoreLayout>
     <section className="product-page">
       <Breadcrumbs items={[{ label: "Shop", to: "/shop" }, { label: currentProduct.name }]} />
@@ -238,10 +281,11 @@ export function ProductDetailPage() {
         </div>
         <div className="detail-info">
           <p className="detail-category">{currentProduct.category}</p><h1>{currentProduct.name}</h1>
-          <div className="detail-rating"><span><Star size={16} fill="currentColor" /> 4.8</span><a href="#reviews">24 reviews</a></div>
+          <div className="detail-rating"><span><Star size={16} fill="currentColor" /> {currentProduct.average_rating || "New"}</span><a href="#reviews">{currentProduct.review_count} reviews</a></div>
           <div className="detail-price"><strong>{money.format(price)}</strong><span>Inclusive of all taxes</span></div>
           <p className="stock-line">In stock and ready to pack</p><p className="detail-description">{currentProduct.description}</p>
-          {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong></button>)}</div> : null}
+          {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}</button>)}</div> : null}
+          {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.min_items === selected.max_items ? `${selected.min_items} core items` : `${selected.min_items}-${selected.max_items} core items`} + {selected.surprise_gift_count} surprise {selected.surprise_gift_count === 1 ? "gift" : "gifts"}.</p></div> : null}
           <div className="purchase-row"><div className="quantity-stepper"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus /></button><strong>{quantity}</strong><button onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus /></button></div><button className="add-cart-primary" onClick={add}>{added ? "Added to cart" : "Add to cart"}</button></div>
           <Link className="buy-now" to="/cart" onClick={add}>Buy now</Link>
           <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-5 working days across India.</p></div></div>
@@ -250,6 +294,13 @@ export function ProductDetailPage() {
           <details><summary>Care and packing</summary><p>Every order is checked and packed carefully. Mystery products remain surprise-based.</p></details>
         </div>
       </div>
+      <section className="product-reviews" id="reviews">
+        <div className="reviews-heading"><div><h2>Customer reviews</h2><p><Star size={18} fill="currentColor" /> {currentProduct.average_rating || "New"} from {currentProduct.review_count} reviews</p></div><span>Verified buyers are marked after a paid order.</span></div>
+        <div className="reviews-layout">
+          <div className="review-list">{reviews.length ? reviews.map((review) => <article key={review.id}><div className="review-stars">{"★★★★★".slice(0, review.rating)}<span>{"★★★★★".slice(review.rating)}</span></div><h3>{review.title}</h3><p>{review.body}</p><footer><strong>{review.customer_name}</strong>{review.verified ? <em>Verified buyer</em> : null}<time>{new Date(review.created_at).toLocaleDateString("en-IN")}</time></footer></article>) : <div className="empty-review"><Star /><h3>Be the first to review this product</h3></div>}</div>
+          <form className="review-form" onSubmit={submitReview}><h3>Share your experience</h3><label>Rating<select value={reviewForm.rating} onChange={(event) => setReviewForm({ ...reviewForm, rating: Number(event.target.value) })}>{[5, 4, 3, 2, 1].map((rating) => <option value={rating} key={rating}>{rating} stars</option>)}</select></label><label>Title<input required value={reviewForm.title} onChange={(event) => setReviewForm({ ...reviewForm, title: event.target.value })} placeholder="What stood out?" /></label><label>Review<textarea required value={reviewForm.body} onChange={(event) => setReviewForm({ ...reviewForm, body: event.target.value })} placeholder="Tell other shoppers about the item count, packing and preferences." /></label><button>Submit review</button>{reviewMessage ? <p className="review-message">{reviewMessage}</p> : null}</form>
+        </div>
+      </section>
       <section className="related-section"><div><h2>You may also like</h2><Link to="/shop">View all</Link></div><div className="catalog-grid">{related.map((item) => <CatalogCard product={item} key={item.id} />)}</div></section>
     </section>
   </StoreLayout>;
@@ -261,6 +312,9 @@ export function CartPage() {
     try { return JSON.parse(localStorage.getItem(PROFILE_KEY) ?? '{"name":"","phone":"","email":"","address":""}'); } catch { return { name: "", phone: "", email: "", address: "" }; }
   });
   const [message, setMessage] = useState("");
+  const [orderNote, setOrderNote] = useState("");
+  const [exclusions, setExclusions] = useState("");
+  const [promotionCode, setPromotionCode] = useState("");
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal && subtotal < 499 ? 49 : 0;
   function update(localId: string, delta: number) {
@@ -269,11 +323,11 @@ export function CartPage() {
   }
   async function checkout(event: FormEvent) {
     event.preventDefault();
-    const order = await createCheckout(profile, cart, "");
+    const order = await createCheckout(profile, cart, orderNote, exclusions, promotionCode);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     writeCart([]); setCart([]); setMessage(`Order ${order.id} placed successfully.`);
   }
-  return <StoreLayout><section className="standard-page cart-page"><Breadcrumbs items={[{ label: "Cart" }]} /><h1>Your shopping bag</h1>{message ? <div className="success-banner"><PackageCheck />{message}<Link to="/my-orders">View order</Link></div> : null}{cart.length ? <div className="cart-layout"><div className="cart-list">{cart.map((item) => <article key={item.localId}><div className="cart-product-art">✦</div><div><h3>{item.product_name}</h3><p>{item.variant_name}</p><strong>{money.format(item.price)}</strong></div><div className="quantity-stepper"><button onClick={() => update(item.localId, -1)}><Minus /></button><strong>{item.quantity}</strong><button onClick={() => update(item.localId, 1)}><Plus /></button></div><button className="remove-item" onClick={() => update(item.localId, -item.quantity)}>Remove</button></article>)}</div><form className="checkout-summary" onSubmit={checkout}><h2>Order summary</h2><div><span>Subtotal</span><strong>{money.format(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? money.format(shipping) : "Free"}</strong></div><div className="summary-total"><span>Total</span><strong>{money.format(subtotal + shipping)}</strong></div><h3>Delivery details</h3><input required placeholder="Full name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /><input required placeholder="Phone" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><input required type="email" placeholder="Email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /><textarea required placeholder="Complete shipping address" value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /><button>Checkout prepaid</button><small>Secure prepaid checkout simulation for this MVP.</small></form></div> : <div className="empty-state"><ShoppingBag /><h2>Your bag is waiting</h2><p>Add a few cute finds and they will appear here.</p><Link to="/shop">Start shopping</Link></div>}</section></StoreLayout>;
+  return <StoreLayout><section className="standard-page cart-page"><Breadcrumbs items={[{ label: "Cart" }]} /><h1>Your shopping bag</h1>{message ? <div className="success-banner"><PackageCheck />{message}<Link to="/my-orders">View order</Link></div> : null}{cart.length ? <div className="cart-layout"><div className="cart-list">{cart.map((item) => <article key={item.localId}><div className="cart-product-art">✦</div><div><h3>{item.product_name}</h3><p>{item.variant_name}</p><strong>{money.format(item.price)}</strong></div><div className="quantity-stepper"><button onClick={() => update(item.localId, -1)}><Minus /></button><strong>{item.quantity}</strong><button onClick={() => update(item.localId, 1)}><Plus /></button></div><button className="remove-item" onClick={() => update(item.localId, -item.quantity)}>Remove</button></article>)}</div><form className="checkout-summary" onSubmit={checkout}><h2>Order summary</h2><div><span>Subtotal</span><strong>{money.format(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? money.format(shipping) : "Free"}</strong></div><div className="summary-total"><span>Total before offers</span><strong>{money.format(subtotal + shipping)}</strong></div><h3>Delivery details</h3><input required placeholder="Full name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /><input required placeholder="Phone" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><input required type="email" placeholder="Email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /><textarea required placeholder="Complete shipping address" value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /><h3>Scoop preferences</h3><label>Do not include<textarea value={exclusions} onChange={(event) => setExclusions(event.target.value)} placeholder="Earrings, keychains, specific colours or materials" /></label><label>Order and gift notes<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} placeholder="Birthday message, colour preferences, packing requests" /></label><label>Promotion code<input value={promotionCode} onChange={(event) => setPromotionCode(event.target.value.toUpperCase())} placeholder="Optional" /></label><button>Checkout prepaid</button><small>Automatic combo and free-shipping offers are calculated securely by the backend.</small></form></div> : <div className="empty-state"><ShoppingBag /><h2>Your bag is waiting</h2><p>Add a few cute finds and they will appear here.</p><Link to="/shop">Start shopping</Link></div>}</section></StoreLayout>;
 }
 
 function AccountLayout({ title, children }: { title: string; children: React.ReactNode }) {
@@ -285,8 +339,39 @@ export function CustomerProfilePage() {
     try { return JSON.parse(localStorage.getItem(PROFILE_KEY) ?? '{"name":"","phone":"","email":"","address":""}'); } catch { return { name: "", phone: "", email: "", address: "" }; }
   });
   const [saved, setSaved] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authUserEmail, setAuthUserEmail] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+  useEffect(() => {
+    void getUser().then((user) => {
+      if (user?.email) {
+        setAuthUserEmail(user.email);
+        setAuthEmail(user.email);
+        setProfile((current) => ({ ...current, email: current.email || user.email || "" }));
+      }
+    });
+  }, []);
   function save(event: FormEvent) { event.preventDefault(); localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); setSaved(true); }
-  return <AccountLayout title="My profile"><form className="profile-form" onSubmit={save}><div><h2>Personal information</h2><p>These details make checkout faster and help find your orders.</p></div><label>Full name<input required value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /></label><label>Phone number<input required value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></label><label>Email address<input required type="email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /></label><label className="full-field">Default shipping address<textarea required value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /></label><button>Save profile</button>{saved ? <span className="saved-note">Profile saved</span> : null}</form></AccountLayout>;
+  async function authenticate(event: FormEvent) {
+    event.preventDefault();
+    try {
+      const result = authMode === "signin" ? await signIn(authEmail, authPassword) : await signUp(authEmail, authPassword);
+      const email = result.user?.email ?? authEmail;
+      setAuthUserEmail(email);
+      setProfile((current) => ({ ...current, email }));
+      setAuthMessage(authMode === "signup" && !result.session ? "Check your email to confirm the account." : "You are signed in.");
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : "Authentication failed.");
+    }
+  }
+  async function logout() {
+    await signOut();
+    setAuthUserEmail("");
+    setAuthMessage("Signed out.");
+  }
+  return <AccountLayout title="My profile"><div className="account-stack">{isSupabaseConfigured ? authUserEmail ? <section className="auth-status"><div><strong>Signed in securely</strong><p>{authUserEmail}</p></div><button onClick={() => void logout()}>Sign out</button></section> : <form className="auth-form" onSubmit={authenticate}><div><h2>{authMode === "signin" ? "Sign in" : "Create account"}</h2><p>Use Supabase Auth to protect orders and verified reviews.</p></div><label>Email<input required type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} /></label><label>Password<input required minLength={6} type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} /></label><button>{authMode === "signin" ? "Sign in" : "Create account"}</button><button className="auth-switch" type="button" onClick={() => setAuthMode((mode) => mode === "signin" ? "signup" : "signin")}>{authMode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}</button>{authMessage ? <p>{authMessage}</p> : null}</form> : <div className="auth-warning"><strong>Supabase Auth is ready in code.</strong><p>Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable sign-in.</p></div>}<form className="profile-form" onSubmit={save}><div><h2>Personal information</h2><p>These details make checkout faster and are linked to your account after checkout.</p></div><label>Full name<input required value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /></label><label>Phone number<input required value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></label><label>Email address<input required readOnly={Boolean(authUserEmail)} type="email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /></label><label className="full-field">Default shipping address<textarea required value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /></label><button>Save profile</button>{saved ? <span className="saved-note">Profile saved</span> : null}</form></div></AccountLayout>;
 }
 
 export function CustomerOrdersPage() {
@@ -295,9 +380,10 @@ export function CustomerOrdersPage() {
   });
   const [orders, setOrders] = useState<Order[]>([]);
   const [searched, setSearched] = useState(false);
-  async function lookup(event?: FormEvent) { event?.preventDefault(); if (!email) return; setOrders(await getMyOrders(email)); setSearched(true); }
-  useEffect(() => { if (email) void lookup(); }, []);
-  return <AccountLayout title="My orders"><form className="order-lookup" onSubmit={lookup}><label>Order email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label><button>Find my orders</button></form>{orders.length ? <div className="customer-orders">{orders.map((order) => <article key={order.id}><header><div><small>Order</small><strong>{order.id}</strong></div><div><small>Placed</small><strong>{new Date(order.created_at).toLocaleDateString("en-IN")}</strong></div><div><small>Total</small><strong>{money.format(order.total)}</strong></div><span>{order.fulfilment_status}</span></header><div className="order-products">{order.items.map((item) => <p key={`${order.id}-${item.product_id}`}>{item.quantity} × {item.product_name} <span>{item.variant_name}</span></p>)}</div><div className="order-progress"><i className="done" /><i className={["packed", "shipped", "delivered"].includes(order.fulfilment_status) ? "done" : ""} /><i className={["shipped", "delivered"].includes(order.fulfilment_status) ? "done" : ""} /><i className={order.fulfilment_status === "delivered" ? "done" : ""} /></div><div className="progress-labels"><span>Confirmed</span><span>Packed</span><span>Shipped</span><span>Delivered</span></div>{order.tracking_number ? <p className="tracking">Tracking: <strong>{order.tracking_number}</strong></p> : null}</article>)}</div> : searched ? <div className="empty-state"><ShoppingBag /><h2>No orders found</h2><p>Check the email used at checkout or start a new order.</p><Link to="/shop">Browse products</Link></div> : <div className="account-placeholder"><PackageCheck /><h2>Find your KhazanaScoop orders</h2><p>Enter the same email address you used during checkout.</p></div>}</AccountLayout>;
+  const [signedIn, setSignedIn] = useState(false);
+  async function lookup(event?: FormEvent) { event?.preventDefault(); setOrders(await getMyOrders(email)); setSearched(true); }
+  useEffect(() => { void getUser().then((user) => { setSignedIn(Boolean(user)); if (user?.email) setEmail(user.email); if (user) void lookup(); }); }, []);
+  return <AccountLayout title="My orders">{signedIn ? <div className="signed-in-order-note"><PackageCheck /><span>Orders are protected by your signed-in account.</span><button onClick={() => void lookup()}>Refresh</button></div> : <div className="auth-warning"><strong>Sign in to view orders</strong><p>For privacy, production order history no longer uses email-only lookup.</p><Link to="/profile">Go to sign in</Link></div>}{orders.length ? <div className="customer-orders">{orders.map((order) => <article key={order.id}><header><div><small>Order</small><strong>{order.id}</strong></div><div><small>Placed</small><strong>{new Date(order.created_at).toLocaleDateString("en-IN")}</strong></div><div><small>Total</small><strong>{money.format(order.total)}</strong></div><span>{order.fulfilment_status}</span></header><div className="order-products">{order.items.map((item) => <p key={`${order.id}-${item.product_id}`}>{item.quantity} × {item.product_name} <span>{item.variant_name}</span></p>)}</div>{order.exclusions ? <p className="order-exclusions"><strong>Excluded:</strong> {order.exclusions}</p> : null}{order.discount_total ? <p><strong>Promotion savings:</strong> {money.format(order.discount_total)}</p> : null}<div className="order-progress"><i className="done" /><i className={["packed", "shipped", "delivered"].includes(order.fulfilment_status) ? "done" : ""} /><i className={["shipped", "delivered"].includes(order.fulfilment_status) ? "done" : ""} /><i className={order.fulfilment_status === "delivered" ? "done" : ""} /></div><div className="progress-labels"><span>Confirmed</span><span>Packed</span><span>Shipped</span><span>Delivered</span></div>{order.tracking_number ? <p className="tracking">Tracking: <strong>{order.tracking_number}</strong></p> : null}</article>)}</div> : searched ? <div className="empty-state"><ShoppingBag /><h2>No orders found</h2><p>Your signed-in account has no completed orders yet.</p><Link to="/shop">Browse products</Link></div> : <div className="account-placeholder"><PackageCheck /><h2>Your protected order history</h2><p>Sign in to load orders linked to your Supabase account.</p></div>}</AccountLayout>;
 }
 
 export function AboutPage() {

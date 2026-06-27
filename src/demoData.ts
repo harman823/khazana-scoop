@@ -1,4 +1,4 @@
-import type { InventoryItem, Order, Product } from "./types";
+import type { InventoryItem, Order, Product, Promotion, Review } from "./types";
 
 export const demoProducts: Product[] = [
   {
@@ -11,10 +11,12 @@ export const demoProducts: Product[] = [
     price: 999,
     image: "/assets/khazana-product-hero.png",
     status: "active",
+    average_rating: 4.9,
+    review_count: 38,
     variants: [
-      { id: "small", name: "Small Scoop", item_count: "7-8 products", price: 549, badge: "Starter Pick", line: "Best for first orders" },
-      { id: "medium", name: "Medium Scoop", item_count: "12-15 products", price: 999, badge: "Best Value", line: "Most loved size" },
-      { id: "large", name: "Large Scoop", item_count: "20-22 products", price: 1499, badge: "Big Surprise", line: "For gifting or hauls" },
+      { id: "small", name: "Budget Scoop", tier: "budget", item_count: "7 products + 1 surprise gift", min_items: 7, max_items: 7, surprise_gift_count: 1, rules: ["At least 3 categories", "One stationery item guaranteed", "Exclusions accepted"], price: 549, compare_at_price: 649, badge: "Budget", line: "A cheerful first scoop" },
+      { id: "medium", name: "Standard Scoop", tier: "standard", item_count: "12 products + 2 surprise gifts", min_items: 12, max_items: 12, surprise_gift_count: 2, rules: ["At least 4 categories", "Two stationery or accessory picks", "Exclusions accepted"], price: 999, compare_at_price: 1199, badge: "Best Value", line: "Our most balanced mix", is_default: true },
+      { id: "large", name: "Premium Scoop", tier: "premium", item_count: "20 products + 3 surprise gifts", min_items: 20, max_items: 20, surprise_gift_count: 3, rules: ["At least 5 categories", "Premium gift-ready packing", "Priority preference matching"], price: 1499, compare_at_price: 1799, badge: "Premium", line: "For gifting or a big haul" },
     ],
   },
   {
@@ -27,10 +29,12 @@ export const demoProducts: Product[] = [
     price: 1199,
     image: "/assets/khazana-product-hero.png",
     status: "active",
+    average_rating: 4.8,
+    review_count: 21,
     variants: [
-      { id: "byo-small", name: "Small BYO", item_count: "8-9 items", price: 699, badge: "Simple", line: "A few favorites" },
-      { id: "byo-medium", name: "Medium BYO", item_count: "14-15 items", price: 1199, badge: "Balanced", line: "More category mix" },
-      { id: "byo-large", name: "Large BYO", item_count: "22-25 items", price: 1699, badge: "Gift Box", line: "Big custom bundle" },
+      { id: "byo-small", name: "Budget BYO", tier: "budget", item_count: "8 items + 1 surprise gift", min_items: 8, max_items: 8, surprise_gift_count: 1, rules: ["Choose up to 2 preferred categories", "Exclude up to 2 categories"], price: 699, badge: "Simple", line: "A few favourites" },
+      { id: "byo-medium", name: "Standard BYO", tier: "standard", item_count: "14 items + 2 surprise gifts", min_items: 14, max_items: 14, surprise_gift_count: 2, rules: ["Choose up to 4 preferred categories", "Colour and occasion matching"], price: 1199, badge: "Balanced", line: "More category variety", is_default: true },
+      { id: "byo-large", name: "Premium BYO", tier: "premium", item_count: "22 items + 3 surprise gifts", min_items: 22, max_items: 22, surprise_gift_count: 3, rules: ["Choose up to 6 preferred categories", "Priority preference matching", "Gift-ready premium packing"], price: 1699, badge: "Gift Box", line: "A generous custom bundle" },
     ],
   },
   ...[
@@ -54,6 +58,8 @@ export const demoProducts: Product[] = [
     icon: String(icon),
     color: String(color),
     status: "active",
+    average_rating: 4.7,
+    review_count: 12,
     variants: [],
   })),
 ];
@@ -87,11 +93,70 @@ export const demoOrder: Order = {
     },
   ],
   order_note: "No earrings, prefer pink stationery.",
+  exclusions: "Earrings",
   payment_status: "paid",
   fulfilment_status: "packed",
   subtotal: 999,
+  discount_total: 0,
   shipping_fee: 0,
   total: 999,
+  promotion_code: null,
   tracking_number: "SHIP123456",
   created_at: new Date().toISOString(),
 };
+
+export const demoPromotions: Promotion[] = [
+  {
+    id: "free-shipping-499",
+    name: "Free shipping over 499",
+    title: "Free shipping above ₹499",
+    message: "Your prepaid order ships free when the cart reaches ₹499.",
+    promotion_type: "free_shipping",
+    discount_type: "none",
+    discount_value: 0,
+    min_subtotal: 499,
+    free_shipping: true,
+    automatic: true,
+    banner_placement: "top",
+    starts_at: new Date().toISOString(),
+    product_ids: [],
+  },
+  {
+    id: "desk-duo",
+    name: "Desk Duo",
+    title: "Desk Duo: save ₹49",
+    message: "Pair the Pastel Gel Pen Set with the Sticker & Note Pack and save ₹49 automatically.",
+    promotion_type: "combo",
+    discount_type: "fixed",
+    discount_value: 49,
+    min_subtotal: 0,
+    free_shipping: false,
+    automatic: true,
+    banner_placement: "catalog",
+    starts_at: new Date().toISOString(),
+    product_ids: ["pen", "stickers"],
+  },
+];
+
+export const demoReviews: Review[] = [
+  {
+    id: "demo-review-1",
+    product_id: "mystery-scoop",
+    customer_name: "Aanya",
+    rating: 5,
+    title: "The Standard tier was exactly as promised",
+    body: "The item count was correct, my no-earrings exclusion was followed, and both surprise gifts were lovely.",
+    verified: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-review-2",
+    product_id: "mystery-scoop",
+    customer_name: "Riya",
+    rating: 5,
+    title: "Thoughtful packing",
+    body: "A balanced mix of stationery and accessories with clear tier rules before checkout.",
+    verified: true,
+    created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
+  },
+];

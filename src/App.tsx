@@ -14,6 +14,7 @@ import {
   updateOrder,
 } from "./api";
 import type { AdminStats, CartItem, Customer, InventoryItem, Order, Product, ProductType, Variant } from "./types";
+import { uploadProductImage } from "./supabase";
 import {
   AboutPage,
   CartPage,
@@ -142,7 +143,7 @@ function Storefront() {
 
   return (
     <>
-      <div className="announce">Free shipping on prepaid orders • Special notes accepted • Ships in 2-5 working days</div>
+      <div className="announce">FREE SHIPPING PAN INDIA • Ships in 5-6 working days</div>
       <header className="site-header">
         <button className="icon-button mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><span /><span /><span /></button>
         <a className="brand" href="#home" aria-label="KhazanaScoop home"><span className="brand-mark">KS</span><span>KhazanaScoop</span></a>
@@ -321,19 +322,30 @@ function AdminInventory() {
 
 function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [form, setForm] = useState<{ name: string; slug: string; product_type: ProductType; category: string; description: string; price: number; badge: string; icon: string; color: string; status: string }>({ name: "", slug: "", product_type: "individual", category: "", description: "", price: 0, badge: "", icon: "✦", color: "#E4FFFA", status: "active" });
+  const [form, setForm] = useState<{ name: string; slug: string; product_type: ProductType; category: string; description: string; price: number; badge: string; icon: string; color: string; image: string; status: string }>({ name: "", slug: "", product_type: "individual", category: "", description: "", price: 0, badge: "", icon: "✦", color: "#E4FFFA", image: "", status: "active" });
+  const [uploading, setUploading] = useState(false);
   useEffect(() => { getAdminProducts().then(setProducts); }, []);
   async function submit(event: FormEvent) {
     event.preventDefault();
     const created = await createAdminProduct(form);
     setProducts((current) => [...current, created]);
-    setForm({ name: "", slug: "", product_type: "individual", category: "", description: "", price: 0, badge: "", icon: "✦", color: "#E4FFFA", status: "active" });
+    setForm({ name: "", slug: "", product_type: "individual", category: "", description: "", price: 0, badge: "", icon: "✦", color: "#E4FFFA", image: "", status: "active" });
+  }
+  async function upload(file?: File) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const image = await uploadProductImage(file);
+      setForm((current) => ({ ...current, image }));
+    } finally {
+      setUploading(false);
+    }
   }
   return (
     <>
       <AdminHeading title="Products" body="Manage catalogue data backed by Prisma: active products, slugs, types, categories, and prices." />
       <div className="admin-grid">
-        <form className="admin-panel preference-form" onSubmit={submit}><h3>Add product</h3><label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: e.target.value.toLowerCase().replaceAll(" ", "-") })} /></label><label>Category<input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></label><label>Description<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label><label>Price<input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value || 0) })} /></label><button className="button primary">Create product</button></form>
+        <form className="admin-panel preference-form" onSubmit={submit}><h3>Add product</h3><label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: e.target.value.toLowerCase().replaceAll(" ", "-") })} /></label><label>Category<input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></label><label>Description<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label><label>Price<input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value || 0) })} /></label><label>Product image<input type="file" accept="image/*" onChange={(event) => void upload(event.target.files?.[0])} /></label>{form.image ? <img className="admin-upload-preview" src={form.image} alt="Uploaded product preview" /> : null}<button className="button primary" disabled={uploading}>{uploading ? "Uploading…" : "Create product"}</button></form>
         <div className="admin-panel"><h3>Catalogue</h3>{products.map((product) => <div className="product-row" key={product.id}><strong>{product.name}</strong><span>{product.product_type}</span><span>{product.category}</span><span>{money.format(product.price)}</span><span className="tag">{product.status}</span></div>)}</div>
       </div>
     </>
@@ -377,7 +389,7 @@ function StatsGrid({ stats }: { stats: AdminStats | null }) {
 }
 
 function OrderSummary({ order }: { order: Order }) {
-  return <div className="order-summary"><div><strong>{order.id}</strong><p>{order.customer.name} • {order.customer.phone}</p><p><strong>Note:</strong> {order.order_note || "No note"}</p></div><div><span className="tag">{order.fulfilment_status}</span><strong>{money.format(order.total)}</strong></div></div>;
+  return <div className="order-summary"><div><strong>{order.id}</strong><p>{order.customer.name} • {order.customer.phone}</p><p><strong>Note:</strong> {order.order_note || "No note"}</p><p><strong>Exclusions:</strong> {order.exclusions || "None"}</p></div><div><span className="tag">{order.fulfilment_status}</span><strong>{money.format(order.total)}</strong>{order.discount_total ? <small>Saved {money.format(order.discount_total)}</small> : null}</div></div>;
 }
 
 function InventorySummary({ item }: { item: InventoryItem }) {
@@ -389,7 +401,7 @@ function ProductCard({ product, onAdd }: { product: Product; onAdd: () => void }
 }
 
 function VariantGrid({ variants, selectedId, onSelect }: { variants: Variant[]; selectedId: string; onSelect: (id: string) => void }) {
-  return <div className="variant-grid">{variants.map((variant) => <button className={`variant-card ${variant.id === selectedId ? "active" : ""}`} key={variant.id} onClick={() => onSelect(variant.id)}>{variant.badge ? <span className="badge">{variant.badge}</span> : null}<strong>{variant.name}</strong><small>{variant.item_count}</small><span className="price">{money.format(variant.price)}</span><small>{variant.line}</small></button>)}</div>;
+  return <div className="variant-grid">{variants.map((variant) => <button className={`variant-card ${variant.id === selectedId ? "active" : ""}`} key={variant.id} onClick={() => onSelect(variant.id)}>{variant.badge ? <span className="badge">{variant.badge}</span> : null}<strong>{variant.name}</strong><small>{variant.item_count}</small><span className="price">{money.format(variant.price)}</span>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}<small>{variant.line}</small><ul>{variant.rules.slice(0, 2).map((rule) => <li key={rule}>{rule}</li>)}</ul></button>)}</div>;
 }
 
 function BuildYourOwn({ product, selectedId, onSelect, onAdd }: { product: Product; selectedId: string; onSelect: (id: string) => void; onAdd: (preferences: Record<string, string>) => void }) {
