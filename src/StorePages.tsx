@@ -28,7 +28,7 @@ interface ByoPreferences {
   giftHampers: string[];
 };
 const defaultByoPreferences: ByoPreferences = { colour: "Neutral surprise", basicItems: [], premiumItems: [], giftHampers: [] };
-const byoBasicItemOptions = ["Stickers (Sheet)", "Mini Notebook", "Cute Pen", "Keychain", "Washi Tape", "Enamel Pin", "Bookmarks (Set of 3)", "Highlighter", "Sticky Notes", "Eraser Set"];
+const byoBasicItemOptions = ["Stickers (Sheet)", "Mini Notebook", "Cute Pen", "Keychain", "Washi Tape", "Enamel Pin", "Bookmarks (Set of 3)", "Highlighter", "Sticky Notes", "Eraser Set", "Scrunchie", "Hair Clip", "Mini Mirror", "Memo Pad", "Gel Pen (Set of 2)", "Pencil Case", "Lanyard", "Lip Balm", "Hand Cream", "Phone Grip", "Coin Purse", "Mini Comb"];
 const byoPremiumItemOptions = ["Premium Journal", "Premium Bracelet", "Korean Hair Claw", "Charm Keychain Set", "Beauty Combo", "Desk Organizer", "Mini Perfume", "Satin Scrunchie Set", "Gift Pouch", "Premium Stationery Set"];
 const giftHamperOptions = ["Birthday hamper", "Best friend hamper", "Self-care hamper", "Stationery hamper", "Pink theme hamper", "Pastel theme hamper", "Beauty mini hamper", "Desk essentials hamper"];
 const hamperDetails: Record<string, string> = {
