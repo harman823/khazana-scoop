@@ -20,27 +20,15 @@ import type { CartItem, Customer, Order, Product, Promotion, Review, Variant } f
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const CART_KEY = "khazanascoopCustomerCart";
 const PROFILE_KEY = "khazanascoopCustomerProfile";
-type ByoItemGroup = "basicItems" | "premiumItems" | "giftHampers";
+type ByoItemGroup = "basicItems" | "premiumItems";
 interface ByoPreferences {
   colour: string;
   basicItems: string[];
   premiumItems: string[];
-  giftHampers: string[];
 };
-const defaultByoPreferences: ByoPreferences = { colour: "Neutral surprise", basicItems: [], premiumItems: [], giftHampers: [] };
+const defaultByoPreferences: ByoPreferences = { colour: "Neutral surprise", basicItems: [], premiumItems: [] };
 const byoBasicItemOptions = ["Stickers (Sheet)", "Mini Notebook", "Cute Pen", "Keychain", "Washi Tape", "Enamel Pin", "Bookmarks (Set of 3)", "Highlighter", "Sticky Notes", "Eraser Set", "Scrunchie", "Hair Clip", "Mini Mirror", "Memo Pad", "Gel Pen (Set of 2)", "Pencil Case", "Lanyard", "Lip Balm", "Hand Cream", "Phone Grip", "Coin Purse", "Mini Comb"];
 const byoPremiumItemOptions = ["Premium Journal", "Premium Bracelet", "Korean Hair Claw", "Charm Keychain Set", "Beauty Combo", "Desk Organizer", "Mini Perfume", "Satin Scrunchie Set", "Gift Pouch", "Premium Stationery Set"];
-const giftHamperOptions = ["Birthday hamper", "Best friend hamper", "Self-care hamper", "Stationery hamper", "Pink theme hamper", "Pastel theme hamper", "Beauty mini hamper", "Desk essentials hamper"];
-const hamperDetails: Record<string, string> = {
-  "Birthday hamper": "Includes birthday card, confetti, candles, and party-themed mini gifts.",
-  "Best friend hamper": "Includes matching friendship bracelets, cute notes, and aesthetic shared items.",
-  "Self-care hamper": "Includes face masks, bath salts, scented candles, and cozy essentials.",
-  "Stationery hamper": "Includes premium notebooks, pens, highlighters, and sticky notes.",
-  "Pink theme hamper": "Includes all pink items: scrunchies, pens, cute clips, and accessories.",
-  "Pastel theme hamper": "Includes soft pastel-coloured accessories, stationery, and mini gifts.",
-  "Beauty mini hamper": "Includes lip gloss, mini perfume, hair claws, and skincare samples.",
-  "Desk essentials hamper": "Includes desk organizers, aesthetic pens, sticky notes, and cable ties."
-};
 const byoTierLimits: Record<string, { basic: number; premium: number; label: string }> = {
   budget: { basic: 7, premium: 2, label: "Small Scoop" },
   standard: { basic: 12, premium: 3, label: "Medium Scoop" },
@@ -122,7 +110,7 @@ function StoreHeader() {
   }
 
   return <>
-    <div className="commerce-announce">{banner?.title ?? "Free shipping above ₹499"} <span>•</span> {banner?.message ?? "Packed with care"} <span>•</span> Prepaid orders</div>
+    <div className="commerce-announce">{banner?.title ?? "Free shipping pan India"} <span>•</span> {banner?.message ?? "Packed with care"} <span>•</span> Prepaid orders</div>
     <header className="commerce-header">
       <button className="commerce-icon mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><Menu /></button>
       <Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link>
@@ -246,7 +234,7 @@ export function ProductDetailPage() {
       setProduct(current);
       setSelectedId(current.variants.find((variant) => variant.is_default)?.id ?? current.variants[0]?.id ?? "");
       setRelated(all.filter((item) => item.id !== current.id && item.category === current.category).slice(0, 4));
-      setByoPreferences({ ...defaultByoPreferences, basicItems: [], premiumItems: [], giftHampers: [] });
+      setByoPreferences({ ...defaultByoPreferences, basicItems: [], premiumItems: [] });
       void getReviews(current.id).then(setReviews);
     }).finally(() => setLoading(false));
   }, [slug]);
@@ -263,7 +251,6 @@ export function ProductDetailPage() {
     scoop_size: byoLimits.label,
     basic_items: byoPreferences.basicItems.join(", ") || "None selected",
     premium_items: byoPreferences.premiumItems.join(", ") || "None selected",
-    gift_hampers: byoPreferences.giftHampers.join(", ") || "None selected",
   } : {};
   function toggleByoItem(group: ByoItemGroup, value: string, limit?: number) {
     setByoPreferences((current) => {
@@ -304,13 +291,13 @@ export function ProductDetailPage() {
           <p className="stock-line">In stock and ready to pack</p><p className="detail-description">{currentProduct.description}</p>
           {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}</button>)}</div> : null}
           {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.item_count}.</p></div> : null}
-          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="preference-select-row"><label>Colour mood<select value={byoPreferences.colour} onChange={(event) => setByoPreferences((current) => ({ ...current, colour: event.target.value }))}><option>Neutral surprise</option><option>Pastel mix</option><option>Pink and cute</option><option>Blue and mint</option><option>Lavender</option></select></label></div><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{byoPreferences.basicItems.length}/{byoLimits.basic} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset className="basic-items-column"><legend>Basic items</legend><p className="selection-count">Choose up to {byoLimits.basic}</p>{byoBasicItemOptions.map((item) => { const checked = byoPreferences.basicItems.includes(item); const locked = basicLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("basicItems", item, byoLimits.basic)} /> {item}</label>; })}</fieldset><fieldset className="premium-items-column"><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p>{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("premiumItems", item, byoLimits.premium)} /> {item}</label>; })}</fieldset></div><fieldset className="gift-hamper-options"><legend>Gift hampers</legend><p className="selection-count">Optional hamper themes for gifting</p>{giftHamperOptions.map((item) => <label key={item} title={hamperDetails[item]}><input type="checkbox" checked={byoPreferences.giftHampers.includes(item)} onChange={() => toggleByoItem("giftHampers", item)} /> {item}</label>)}</fieldset></div> : null}
+          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="preference-select-row"><label>Colour mood<select value={byoPreferences.colour} onChange={(event) => setByoPreferences((current) => ({ ...current, colour: event.target.value }))}><option>Neutral surprise</option><option>Pastel mix</option><option>Pink and cute</option><option>Blue and mint</option><option>Lavender</option></select></label></div><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{byoPreferences.basicItems.length}/{byoLimits.basic} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset className="basic-items-column"><legend>Basic items</legend><p className="selection-count">Choose up to {byoLimits.basic}</p>{byoBasicItemOptions.map((item) => { const checked = byoPreferences.basicItems.includes(item); const locked = basicLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("basicItems", item, byoLimits.basic)} /> {item}</label>; })}</fieldset><fieldset className="premium-items-column"><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p>{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("premiumItems", item, byoLimits.premium)} /> {item}</label>; })}</fieldset></div></div> : null}
           <div className="purchase-row"><div className="quantity-stepper"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus /></button><strong>{quantity}</strong><button onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus /></button></div><button className="add-cart-primary" onClick={add}>{added ? "Added to cart" : "Add to cart"}</button></div>
           <Link className="buy-now" to="/cart" onClick={add}>Buy now</Link>
-          <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-5 working days across India.</p></div></div>
+          <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-3 working days across India.</p></div></div>
           <details open><summary>Product details</summary><p>{currentProduct.description} Product colors and exact designs may vary slightly depending on available stock.</p></details>
-          <details><summary>Shipping and returns</summary><p>Free shipping above ₹499. Damaged or incorrect items can be reported within 48 hours of delivery.</p></details>
-          <details><summary>Care and packing</summary><p>Every order is checked and packed carefully. Mystery products remain surprise-based.</p></details>
+          <details><summary>Shipping and returns</summary><p>Free shipping pan India. Damaged or incorrect items can be reported within 48 hours of delivery.</p></details>
+          <details><summary>Care and packing</summary><p>Every order is checked and packed carefully.</p></details>
         </div>
       </div>
       <section className="product-reviews" id="reviews">
@@ -335,7 +322,7 @@ export function CartPage() {
   const [exclusions, setExclusions] = useState("");
   const [promotionCode, setPromotionCode] = useState("");
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal && subtotal < 499 ? 49 : 0;
+  const shipping = 0;
   function update(localId: string, delta: number) {
     const next = cart.map((item) => item.localId === localId ? { ...item, quantity: item.quantity + delta } : item).filter((item) => item.quantity > 0);
     setCart(next); writeCart(next);
@@ -346,7 +333,7 @@ export function CartPage() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     writeCart([]); setCart([]); setMessage(`Order ${order.id} placed successfully.`);
   }
-  return <StoreLayout><section className="standard-page cart-page"><Breadcrumbs items={[{ label: "Cart" }]} /><h1>Your shopping bag</h1>{message ? <div className="success-banner"><PackageCheck />{message}<Link to="/my-orders">View order</Link></div> : null}{cart.length ? <div className="cart-layout"><div className="cart-list">{cart.map((item) => <article key={item.localId}><div className="cart-product-art">✦</div><div><h3>{item.product_name}</h3><p>{item.variant_name}</p><strong>{money.format(item.price)}</strong></div><div className="quantity-stepper"><button onClick={() => update(item.localId, -1)}><Minus /></button><strong>{item.quantity}</strong><button onClick={() => update(item.localId, 1)}><Plus /></button></div><button className="remove-item" onClick={() => update(item.localId, -item.quantity)}>Remove</button></article>)}</div><form className="checkout-summary" onSubmit={checkout}><h2>Order summary</h2><div><span>Subtotal</span><strong>{money.format(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? money.format(shipping) : "Free"}</strong></div><div className="summary-total"><span>Total before offers</span><strong>{money.format(subtotal + shipping)}</strong></div><h3>Delivery details</h3><input required placeholder="Full name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /><input required placeholder="Phone" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><input required type="email" placeholder="Email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /><textarea required placeholder="Complete shipping address" value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /><h3>Scoop preferences</h3><label>Do not include<textarea value={exclusions} onChange={(event) => setExclusions(event.target.value)} placeholder="Earrings, keychains, specific colours or materials" /></label><label>Order and gift notes<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} placeholder="Birthday message, colour preferences, packing requests" /></label><label>Promotion code<input value={promotionCode} onChange={(event) => setPromotionCode(event.target.value.toUpperCase())} placeholder="Optional" /></label><button>Checkout prepaid</button><small>Free-shipping offers are calculated securely by the backend.</small></form></div> : <div className="empty-state"><ShoppingBag /><h2>Your bag is waiting</h2><p>Add a few cute finds and they will appear here.</p><Link to="/shop">Start shopping</Link></div>}</section></StoreLayout>;
+  return <StoreLayout><section className="standard-page cart-page"><Breadcrumbs items={[{ label: "Cart" }]} /><h1>Your shopping bag</h1>{message ? <div className="success-banner"><PackageCheck />{message}<Link to="/my-orders">View order</Link></div> : null}{cart.length ? <div className="cart-layout"><div className="cart-list">{cart.map((item) => <article key={item.localId}><div className="cart-product-art">✦</div><div><h3>{item.product_name}</h3><p>{item.variant_name}</p><strong>{money.format(item.price)}</strong></div><div className="quantity-stepper"><button onClick={() => update(item.localId, -1)}><Minus /></button><strong>{item.quantity}</strong><button onClick={() => update(item.localId, 1)}><Plus /></button></div><button className="remove-item" onClick={() => update(item.localId, -item.quantity)}>Remove</button></article>)}</div><form className="checkout-summary" onSubmit={checkout}><h2>Order summary</h2><div><span>Subtotal</span><strong>{money.format(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? money.format(shipping) : "Free"}</strong></div><div className="summary-total"><span>Total before offers</span><strong>{money.format(subtotal + shipping)}</strong></div><h3>Delivery details</h3><input required placeholder="Full name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /><input required placeholder="Phone" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><input required type="email" placeholder="Email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /><textarea required placeholder="Complete shipping address" value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /><h3>Scoop preferences</h3><label>Do not include<textarea value={exclusions} onChange={(event) => setExclusions(event.target.value)} placeholder="Earrings, keychains, specific colours or materials" /></label><label>Order and gift notes<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} placeholder="Birthday message, colour preferences, packing requests" /></label><label>Promotion code<input value={promotionCode} onChange={(event) => setPromotionCode(event.target.value.toUpperCase())} placeholder="Optional" /></label><button>Checkout prepaid</button></form></div> : <div className="empty-state"><ShoppingBag /><h2>Your bag is waiting</h2><p>Add a few cute finds and they will appear here.</p><Link to="/shop">Start shopping</Link></div>}</section></StoreLayout>;
 }
 
 function AccountLayout({ title, children }: { title: string; children: React.ReactNode }) {
@@ -411,14 +398,14 @@ export function AboutPage() {
 
 export function ContactPage() {
   const [sent, setSent] = useState(false);
-  return <StoreLayout><section className="standard-page support-page"><Breadcrumbs items={[{ label: "Contact" }]} /><div className="support-grid"><div><h1>How can we help?</h1><p>Questions about an order, product or mystery scoop? Send us a note and include your order number when possible.</p><div className="contact-details"><strong>Email</strong><a href="mailto:hello@khazanascoop.com">hello@khazanascoop.com</a><strong>Support hours</strong><span>Monday–Saturday, 10 AM–6 PM IST</span></div></div><form onSubmit={(event) => { event.preventDefault(); setSent(true); }}><label>Name<input required /></label><label>Email<input required type="email" /></label><label>Order number<input placeholder="Optional" /></label><label>Message<textarea required rows={6} /></label><button>Send message</button>{sent ? <p className="saved-note">Thanks. Your message has been recorded for this MVP.</p> : null}</form></div></section></StoreLayout>;
+  return <StoreLayout><section className="standard-page support-page"><Breadcrumbs items={[{ label: "Contact" }]} /><div className="support-grid"><div><h1>How can we help?</h1><p>Questions about an order, product or mystery scoop? Send us a note and include your order number when possible.</p><div className="contact-details"><strong>Email</strong><a href="mailto:hello@khazanascoop.com">hello@khazanascoop.com</a><strong>Support hours</strong><span>Monday–Saturday, 10 AM–6 PM IST</span></div></div><form onSubmit={(event) => { event.preventDefault(); setSent(true); }}><label>Name<input required /></label><label>Email<input required type="email" /></label><label>Order number<input placeholder="Optional" /></label><label>Message<textarea required rows={6} /></label><button>Send message</button>{sent ? <p className="saved-note">Thanks. Your message has been received.</p> : null}</form></div></section></StoreLayout>;
 }
 
 export function FaqPage() {
   const faqs = [
     ["What is a mystery scoop?", "A surprise box containing a stated number of handpicked products. Exact colors, designs and combinations vary."],
     ["Can I request specific categories?", "Yes. Add order notes or choose Build Your Own. Requests are followed where available but cannot be guaranteed."],
-    ["How long does shipping take?", "Orders usually dispatch within 2-5 working days. Delivery time depends on your location and courier."],
+    ["How long does shipping take?", "Orders usually dispatch within 2-3 working days. Delivery time depends on your location and courier."],
     ["Can I return a mystery scoop?", "Mystery scoops are not returnable for preference reasons. Damaged, missing or incorrect products can be reported within 48 hours."],
     ["How do I track my order?", "Open My Orders and enter the email address used during checkout."],
   ];
@@ -426,9 +413,9 @@ export function FaqPage() {
 }
 
 const policies = {
-  shipping: ["Shipping policy", "Orders are normally dispatched within 2-5 working days. Free shipping applies above ₹499; smaller orders have a ₹49 shipping fee.", "Delivery timelines vary by pincode and courier availability. Tracking details appear in My Orders once the package is shipped."],
+  shipping: ["Shipping policy", "Orders are normally dispatched within 2-3 working days. Free shipping pan India.", "Delivery timelines vary by pincode and courier availability. Tracking details appear in My Orders once the package is shipped."],
   returns: ["Returns and refunds", "Mystery scoops and preference-based boxes are not returnable because their contents are selected and packed specifically for each order.", "For damaged, missing or incorrect products, contact us within 48 hours with your order number and an unboxing video or clear photographs."],
-  privacy: ["Privacy policy", "KhazanaScoop collects the contact, delivery and order information required to process purchases and provide support.", "We do not sell personal data. Local profile details in this MVP remain in your browser, while completed order records are stored by the backend."],
+  privacy: ["Privacy policy", "KhazanaScoop collects the contact, delivery and order information required to process purchases and provide support.", "We do not sell personal data. Local profile details remain in your browser, while completed order records are securely stored."],
   terms: ["Terms of service", "By placing an order, you accept that mystery product designs, colors and combinations may vary from illustrative images.", "Orders are prepaid. Availability, dispatch estimates and promotional terms may change, but confirmed order totals remain unchanged."],
 } as const;
 
