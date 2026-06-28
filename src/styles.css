@@ -890,6 +890,18 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(0, 106, 102,
 }
 .byo-preferences input[type="checkbox"]:active { transform: scale(0.92); }
 
+.byo-items-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.byo-items-scroll::-webkit-scrollbar { width: 5px; }
+.byo-items-scroll::-webkit-scrollbar-thumb { background: #dce7e3; border-radius: 10px; }
+
 .product-reviews { margin-top: 64px; padding-top: 52px; border-top: 1px solid #dfe5e2; }
 .reviews-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; }
 .reviews-heading p { display: flex; align-items: center; gap: 7px; margin: 8px 0 0; color: #d49c18; font-weight: 900; }
