@@ -22,10 +22,10 @@ const CART_KEY = "khazanascoopCustomerCart";
 const PROFILE_KEY = "khazanascoopCustomerProfile";
 type ByoItemGroup = "basicItems" | "premiumItems";
 interface ByoPreferences {
-  basicItems: string[];
+  basicItems: Record<string, number>;
   premiumItems: string[];
 };
-const defaultByoPreferences: ByoPreferences = { basicItems: [], premiumItems: [] };
+const defaultByoPreferences: ByoPreferences = { basicItems: {}, premiumItems: [] };
 const byoBasicItemOptions = ["Stickers (Sheet)", "Mini Notebook", "Cute Pen", "Keychain", "Washi Tape", "Enamel Pin", "Bookmarks (Set of 3)", "Highlighter", "Sticky Notes", "Eraser Set", "Scrunchie", "Hair Clip", "Mini Mirror", "Memo Pad", "Gel Pen (Set of 2)", "Pencil Case", "Lanyard", "Lip Balm", "Hand Cream", "Phone Grip", "Coin Purse", "Mini Comb"];
 const byoPremiumItemOptions = ["Premium Journal", "Premium Bracelet", "Korean Hair Claw", "Charm Keychain Set", "Beauty Combo", "Desk Organizer", "Mini Perfume", "Satin Scrunchie Set", "Gift Pouch", "Premium Stationery Set"];
 const byoTierLimits: Record<string, { basic: number; premium: number; label: string }> = {
@@ -233,7 +233,7 @@ export function ProductDetailPage() {
       setProduct(current);
       setSelectedId(current.variants.find((variant) => variant.is_default)?.id ?? current.variants[0]?.id ?? "");
       setRelated(all.filter((item) => item.id !== current.id && item.category === current.category).slice(0, 4));
-      setByoPreferences({ ...defaultByoPreferences, basicItems: [], premiumItems: [] });
+      setByoPreferences({ ...defaultByoPreferences, basicItems: {}, premiumItems: [] });
       void getReviews(current.id).then(setReviews);
     }).finally(() => setLoading(false));
   }, [slug]);
@@ -244,23 +244,42 @@ export function ProductDetailPage() {
   const isBuildYourOwn = currentProduct.product_type === "build_your_own";
   const byoLimits = byoTierLimits[selected?.tier ?? "standard"] ?? byoTierLimits.standard;
   const totalByoLimit = byoLimits.basic + byoLimits.premium;
-  const currentByoTotal = byoPreferences.basicItems.length + byoPreferences.premiumItems.length;
+  const basicItemsCount = Object.values(byoPreferences.basicItems).reduce((a, b) => a + b, 0);
+  const currentByoTotal = basicItemsCount + byoPreferences.premiumItems.length;
   const dynamicBasicLimit = totalByoLimit - byoPreferences.premiumItems.length;
-  const basicLimitReached = byoPreferences.basicItems.length >= dynamicBasicLimit;
+  const basicLimitReached = basicItemsCount >= dynamicBasicLimit;
   const premiumLimitReached = byoPreferences.premiumItems.length >= byoLimits.premium || currentByoTotal >= totalByoLimit;
   const byoPreferencePayload: Record<string, string> = isBuildYourOwn ? {
     scoop_size: byoLimits.label,
-    basic_items: byoPreferences.basicItems.join(", ") || "None selected",
+    basic_items: Object.entries(byoPreferences.basicItems).map(([k, v]) => `${v}x ${k}`).join(", ") || "None selected",
     premium_items: byoPreferences.premiumItems.join(", ") || "None selected",
   } : {};
-  function toggleByoItem(group: ByoItemGroup, value: string) {
+  function toggleByoPremiumItem(value: string) {
     setByoPreferences((current) => {
-      const values = current[group];
-      if (values.includes(value)) return { ...current, [group]: values.filter((item) => item !== value) };
-      const currentTotal = current.basicItems.length + current.premiumItems.length;
+      const values = current.premiumItems;
+      if (values.includes(value)) return { ...current, premiumItems: values.filter((item) => item !== value) };
+      const basicCount = Object.values(current.basicItems).reduce((a, b) => a + b, 0);
+      const currentTotal = basicCount + current.premiumItems.length;
       if (currentTotal >= totalByoLimit) return current;
-      if (group === "premiumItems" && current.premiumItems.length >= byoLimits.premium) return current;
-      return { ...current, [group]: [...values, value] };
+      if (current.premiumItems.length >= byoLimits.premium) return current;
+      return { ...current, premiumItems: [...values, value] };
+    });
+  }
+  function updateByoBasicItem(value: string, delta: number) {
+    setByoPreferences((current) => {
+      const currentCounts = current.basicItems;
+      const currentQty = currentCounts[value] ?? 0;
+      const nextQty = Math.max(0, currentQty + delta);
+      if (nextQty === currentQty) return current;
+      if (delta > 0) {
+        const basicCount = Object.values(current.basicItems).reduce((a, b) => a + b, 0);
+        const currentTotal = basicCount + current.premiumItems.length;
+        if (currentTotal >= totalByoLimit) return current;
+      }
+      const nextCounts = { ...currentCounts };
+      if (nextQty === 0) delete nextCounts[value];
+      else nextCounts[value] = nextQty;
+      return { ...current, basicItems: nextCounts };
     });
   }
   function add() {
@@ -294,7 +313,7 @@ export function ProductDetailPage() {
           <p className="stock-line">In stock and ready to pack</p><p className="detail-description">{currentProduct.description}</p>
           {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}</button>)}</div> : null}
           {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.item_count}.</p></div> : null}
-          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{byoPreferences.basicItems.length}/{dynamicBasicLimit} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset className="basic-items-column"><legend>Basic items</legend><p className="selection-count">Choose up to {dynamicBasicLimit}</p>{byoBasicItemOptions.map((item) => { const checked = byoPreferences.basicItems.includes(item); const locked = basicLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("basicItems", item)} /> {item}</label>; })}</fieldset><fieldset className="premium-items-column"><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p>{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoItem("premiumItems", item)} /> {item}</label>; })}</fieldset></div></div> : null}
+          {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{basicItemsCount}/{dynamicBasicLimit} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset className="basic-items-column"><legend>Basic items</legend><p className="selection-count">Choose up to {dynamicBasicLimit}</p>{byoBasicItemOptions.map((item) => { const qty = byoPreferences.basicItems[item] ?? 0; const locked = basicLimitReached && qty === 0; return <div className={locked ? "choice-disabled" : ""} key={item} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", fontWeight: 800, fontSize: "13px", color: "var(--teal-dark)" }}><span>{item}</span><div className="quantity-stepper" style={{ gap: "6px" }}><button type="button" onClick={() => updateByoBasicItem(item, -1)} disabled={qty === 0}><Minus size={14} /></button><strong style={{ minWidth: "16px", textAlign: "center" }}>{qty}</strong><button type="button" onClick={() => updateByoBasicItem(item, 1)} disabled={basicLimitReached}><Plus size={14} /></button></div></div>; })}</fieldset><fieldset className="premium-items-column"><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p>{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoPremiumItem(item)} /> {item}</label>; })}</fieldset></div></div> : null}
           <div className="purchase-row"><div className="quantity-stepper"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus /></button><strong>{quantity}</strong><button onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus /></button></div><button className="add-cart-primary" onClick={add}>{added ? "Added to cart" : "Add to cart"}</button></div>
           <Link className="buy-now" to="/cart" onClick={add}>Buy now</Link>
           <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-3 working days across India.</p></div></div>
