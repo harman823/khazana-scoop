@@ -112,7 +112,7 @@ function StoreHeader() {
     <div className="commerce-announce">{banner?.title ?? "Free shipping pan India"} <span>•</span> {banner?.message ?? "Packed with care"} <span>•</span> Prepaid orders</div>
     <header className="commerce-header">
       <button className="commerce-icon mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><Menu /></button>
-      <Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link>
+      <Link className="commerce-brand" to="/"><img src="/assets/logo.png" alt="Logo" style={{ height: "24px", width: "24px", borderRadius: "50%", objectFit: "cover", marginRight: "8px" }} /><strong>KhazanaScoop</strong></Link>
       <form className="commerce-search" onSubmit={search}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search cute finds and gifts" /></form>
       <nav className={`commerce-actions ${menuOpen ? "open" : ""}`}>
         <NavLink to="/shop">Shop</NavLink>
@@ -127,10 +127,11 @@ function StoreHeader() {
 
 function StoreFooter() {
   return <footer className="commerce-footer">
-    <div><Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link><p>Cute finds, mystery scoops and thoughtful little gifts, packed in India.</p></div>
+    <div><Link className="commerce-brand" to="/"><img src="/assets/logo.png" alt="Logo" style={{ height: "24px", width: "24px", borderRadius: "50%", objectFit: "cover", marginRight: "8px" }} /><strong>KhazanaScoop</strong></Link><p>Cute finds, mystery scoops and thoughtful little gifts, packed in India.</p></div>
     <div><strong>Shop</strong><Link to="/shop">All products</Link><Link to="/products/mystery-scoop">Mystery scoops</Link><Link to="/products/build-your-own-scoop">Build your scoop</Link></div>
     <div><strong>Customer care</strong><Link to="/my-orders">Track my order</Link><Link to="/faq">FAQ</Link><Link to="/contact">Contact us</Link><Link to="/returns">Returns</Link></div>
     <div><strong>Information</strong><Link to="/about">About us</Link><Link to="/shipping">Shipping policy</Link><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link></div>
+    <div><strong>Connect with us</strong><a href="https://instagram.com/khazanascoop" target="_blank" rel="noreferrer">Instagram</a><a href="https://facebook.com/khazanascoop" target="_blank" rel="noreferrer">Facebook</a><a href="tel:+919000000000">Call: +91 90000 00000</a></div>
   </footer>;
 }
 
@@ -226,6 +227,8 @@ export function ProductDetailPage() {
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", body: "" });
   const [reviewMessage, setReviewMessage] = useState("");
   const [byoPreferences, setByoPreferences] = useState<ByoPreferences>(defaultByoPreferences);
+  const [instaVideo, setInstaVideo] = useState(false);
+  const [userPreference, setUserPreference] = useState("");
   useEffect(() => {
     setByoPreferences({ ...defaultByoPreferences, basicItems: {}, premiumItems: [] });
   }, [selectedId]);
@@ -237,13 +240,15 @@ export function ProductDetailPage() {
       setSelectedId(current.variants.find((variant) => variant.is_default)?.id ?? current.variants[0]?.id ?? "");
       setRelated(all.filter((item) => item.id !== current.id && item.category === current.category).slice(0, 4));
       setByoPreferences({ ...defaultByoPreferences, basicItems: {}, premiumItems: [] });
+      setInstaVideo(false);
+      setUserPreference("");
       void getReviews(current.id).then(setReviews);
     }).finally(() => setLoading(false));
   }, [slug]);
   if (isLoading || !product) return <PageLoading label="Loading product" />;
   const currentProduct = product;
   const selected = currentProduct.variants.find((variant) => variant.id === selectedId);
-  const price = selected?.price ?? currentProduct.price;
+  const price = (selected?.price ?? currentProduct.price) + (instaVideo ? 50 : 0);
   const isBuildYourOwn = currentProduct.product_type === "build_your_own";
   const byoLimits = byoTierLimits[selected?.tier ?? "standard"] ?? byoTierLimits.standard;
   const totalByoLimit = byoLimits.basic + byoLimits.premium;
@@ -252,11 +257,15 @@ export function ProductDetailPage() {
   const dynamicBasicLimit = totalByoLimit - byoPreferences.premiumItems.length;
   const basicLimitReached = basicItemsCount >= dynamicBasicLimit;
   const premiumLimitReached = byoPreferences.premiumItems.length >= byoLimits.premium || currentByoTotal >= totalByoLimit;
-  const byoPreferencePayload: Record<string, string> = isBuildYourOwn ? {
-    scoop_size: byoLimits.label,
-    basic_items: Object.entries(byoPreferences.basicItems).map(([k, v]) => `${v}x ${k}`).join(", ") || "None selected",
-    premium_items: byoPreferences.premiumItems.join(", ") || "None selected",
-  } : {};
+  const byoPreferencePayload: Record<string, string> = {
+    ...(isBuildYourOwn ? {
+      scoop_size: byoLimits.label,
+      basic_items: Object.entries(byoPreferences.basicItems).map(([k, v]) => `${v}x ${k}`).join(", ") || "None selected",
+      premium_items: byoPreferences.premiumItems.join(", ") || "None selected",
+    } : {}),
+    ...(instaVideo ? { add_on: "Instagram Video (+₹50)" } : {}),
+    ...(userPreference.trim() ? { notes: userPreference.trim() } : {}),
+  };
   function toggleByoPremiumItem(value: string) {
     setByoPreferences((current) => {
       const values = current.premiumItems;
@@ -318,6 +327,25 @@ export function ProductDetailPage() {
           {currentProduct.variants.length ? <div className="detail-options"><strong>Choose your scoop</strong>{currentProduct.variants.map((variant) => <button className={variant.id === selectedId ? "active" : ""} onClick={() => setSelectedId(variant.id)} key={variant.id}><span>{variant.name}</span><small>{variant.item_count}</small><strong>{money.format(variant.price)}</strong>{variant.compare_at_price ? <del>{money.format(variant.compare_at_price)}</del> : null}</button>)}</div> : null}
           {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.item_count}.</p></div> : null}
           {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{basicItemsCount}/{dynamicBasicLimit} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset className="basic-items-column"><legend>Basic items</legend><p className="selection-count">Choose up to {dynamicBasicLimit} (Max 3 per item)</p><div className="byo-items-scroll">{byoBasicItemOptions.map((item) => { const qty = byoPreferences.basicItems[item] ?? 0; const locked = basicLimitReached && qty === 0; return <div className={locked ? "choice-disabled" : ""} key={item} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 800, fontSize: "13px", color: "var(--teal-dark)" }}><span>{item}</span><div className="quantity-stepper" style={{ gap: "6px" }}><button type="button" style={{ minWidth: "26px", height: "26px" }} onClick={() => updateByoBasicItem(item, -1)} disabled={qty === 0}>-</button><strong style={{ minWidth: "16px", textAlign: "center" }}>{qty}</strong><button type="button" style={{ minWidth: "26px", height: "26px" }} onClick={() => updateByoBasicItem(item, 1)} disabled={basicLimitReached || qty >= 3}>+</button></div></div>; })}</div></fieldset><fieldset className="premium-items-column"><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p><div className="byo-items-scroll">{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item} style={{ margin: 0 }}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoPremiumItem(item)} /> {item}</label>; })}</div></fieldset></div></div> : null}
+          {isBuildYourOwn || currentProduct.product_type === "mystery_scoop" ? (
+            <div className="add-ons-section" style={{ margin: "16px 0", padding: "16px", border: "1px solid var(--gray-border)", borderRadius: "8px", background: "#fcfdfe" }}>
+              <label style={{ display: "flex", gap: "8px", alignItems: "center", cursor: "pointer", fontWeight: 600, color: "var(--teal-dark)" }}>
+                <input type="checkbox" checked={instaVideo} onChange={(e) => setInstaVideo(e.target.checked)} />
+                Add Instagram Video to show your scoop (+₹50)
+              </label>
+              {isBuildYourOwn && (
+                <div style={{ marginTop: "16px" }}>
+                  <label style={{ display: "block", marginBottom: "8px", fontWeight: 600, color: "var(--teal-dark)" }}>Preferences & Notes</label>
+                  <textarea 
+                    value={userPreference} 
+                    onChange={(e) => setUserPreference(e.target.value)} 
+                    placeholder="Tell us any specific colours, likes or dislikes..." 
+                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid var(--gray-border)", resize: "vertical", minHeight: "80px", fontFamily: "inherit" }} 
+                  />
+                </div>
+              )}
+            </div>
+          ) : null}
           <div className="purchase-row"><button className="add-cart-primary" onClick={add}>{added ? "Added to cart" : "Add to cart"}</button></div>
           <Link className="buy-now" to="/cart" onClick={add}>Buy now</Link>
           <div className="delivery-check"><Truck /><div><strong>Delivery availability</strong><p>Usually dispatched in 2-3 working days across India.</p></div></div>
@@ -419,7 +447,7 @@ export function CustomerOrdersPage() {
 }
 
 export function AboutPage() {
-  return <StoreLayout><section className="about-page"><div className="about-hero"><div><Breadcrumbs items={[{ label: "About" }]} /><h1>Small joys deserve thoughtful packing.</h1><p>KhazanaScoop began with a simple idea: make cute, useful little finds easier to discover, gift and enjoy.</p><Link to="/shop">Explore the collection</Link></div><img src="/assets/khazana-product-hero.png" alt="KhazanaScoop mystery box and cute products" /></div><div className="about-story"><h2>Made for happy unboxing</h2><p>We bring together stationery, accessories, beauty minis and surprise gifts in clear, easy-to-shop collections. Mystery scoops keep the fun of surprise, while Build Your Own gives you more control over colours, categories and occasions.</p><p>Every order note is read before packing. We cannot guarantee every preference, but we always try to make each box feel considered rather than random.</p></div><div className="values-row"><article><strong>Clear choices</strong><p>Prices, item counts and policies are visible before checkout.</p></article><article><strong>Careful packing</strong><p>Products are checked and prepared for a cheerful arrival.</p></article><article><strong>Useful cuteness</strong><p>Little finds designed for desks, bags, gifting and daily joy.</p></article></div></section></StoreLayout>;
+  return <StoreLayout><section className="about-page"><div className="about-hero"><div><Breadcrumbs items={[{ label: "About" }]} /><h1>About Khazana Scoop</h1><p>Khazana Scoop started with a simple love for cute little things — stationery that makes studying feel better, tiny accessories that instantly lift your mood, and surprise gifts that make you smile before you even open them.</p></div><img src="/assets/khazana-product-hero.png" alt="KhazanaScoop mystery box and cute products" /></div><div className="about-story"><h2>Our Story</h2><p>We wanted to create something that feels more exciting than a regular parcel. Something that brings back that childhood feeling of opening a surprise and wondering, “What’s inside?” That’s how Khazana Scoop was born.</p><p>Here, you’ll find mystery scoops, curated gift hampers, cute accessories, stationery, self-care picks, plushies, keychains, fridge magnets, and lots of tiny happy things. Some boxes are a complete surprise, some are packed around your preferences, and some can be built exactly the way you like.</p></div><div className="about-story" style={{ marginTop: "24px" }}><h2>Packed with Care</h2><p>Every order is packed with care, keeping your vibe, colours, occasion, and little notes in mind. Whether you’re gifting your best friend, surprising your sister, treating yourself, or just looking for something cute and affordable, we try to make every box feel personal.</p><p>Khazana Scoop is not just about products. It’s about the joy of receiving something cute, thoughtful, and a little unexpected.</p><p><strong>A small box, a little mystery, and a lot of happiness — that’s Khazana Scoop.</strong></p></div></section></StoreLayout>;
 }
 
 export function ContactPage() {

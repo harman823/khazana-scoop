@@ -37,6 +37,24 @@ export const demoProducts: Product[] = [
       { id: "byo-large", name: "Large Scoop", tier: "premium", item_count: "15 basic items + 5 premium items", min_items: 20, max_items: 20, surprise_gift_count: 0, rules: ["Includes 15 basic items", "Includes 5 premium items"], price: 1699, badge: "Large", line: "A generous custom bundle" },
     ],
   },
+  {
+    id: "gift-hampers",
+    name: "Gift Hampers",
+    slug: "gift-hampers",
+    product_type: "individual",
+    category: "Gift Hampers",
+    description: "Curated gift hampers for special occasions. Packed beautifully and ready to gift.",
+    price: 1499,
+    image: "/assets/khazana-product-hero.png",
+    status: "active",
+    average_rating: 4.9,
+    review_count: 15,
+    variants: [
+      { id: "hamper-small", name: "Mini Hamper", tier: "budget", item_count: "5 items + greeting card", min_items: 5, max_items: 5, surprise_gift_count: 0, rules: ["5 items", "Greeting card"], price: 799, badge: "Mini", line: "A small cute gesture" },
+      { id: "hamper-standard", name: "Standard Hamper", tier: "standard", item_count: "8 items + greeting card + chocolates", min_items: 8, max_items: 8, surprise_gift_count: 0, rules: ["8 items", "Greeting card", "Chocolates"], price: 1499, badge: "Standard", line: "Perfect for birthdays", is_default: true },
+      { id: "hamper-deluxe", name: "Deluxe Hamper", tier: "premium", item_count: "12 items + greeting card + chocolates + plushie", min_items: 12, max_items: 12, surprise_gift_count: 0, rules: ["12 items", "Greeting card", "Chocolates", "Plushie"], price: 2499, badge: "Deluxe", line: "The ultimate gift" }
+    ],
+  },
   ...[
     ["scrunchie", "Cloud Soft Scrunchie", "Hair Accessories", 89, "✿", "#FFD1DC"],
     ["pen", "Pastel Gel Pen Set", "Cute Pens", 149, "✎", "#E6E6FA"],
