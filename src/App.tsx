@@ -167,7 +167,7 @@ function Storefront() {
     <>
       <header className="site-header">
         <button className="icon-button mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><span /><span /><span /></button>
-        <a className="brand" href="#home" aria-label="KhazanaScoop home"><span className="brand-mark">KS</span><span>KhazanaScoop</span></a>
+        <a className="brand" href="#home" aria-label="KhazanaScoop home"><img src="/assets/logo.png" alt="Khazana Scoop" style={{ height: "32px", width: "32px", borderRadius: "8px", objectFit: "cover", marginRight: "8px" }} /><span>KhazanaScoop</span></a>
         <nav className={`nav ${menuOpen ? "open" : ""}`}>
           <Link to="/shop">Shop All</Link><Link to="/products/mystery-scoop">Mystery Scoops</Link><Link to="/products/build-your-own-scoop">Build Your Scoop</Link><Link to="/about">About</Link><Link to="/profile">Account</Link>
         </nav>
@@ -241,7 +241,7 @@ function AdminLogin() {
   return (
     <main className="admin-login">
       <form className="checkout-card" onSubmit={submit}>
-        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>KhazanaScoop</span></Link>
+        <Link to="/" className="brand"><img src="/assets/logo.png" alt="Khazana Scoop Logo" style={{ height: "32px", width: "32px", borderRadius: "8px", objectFit: "cover", marginRight: "8px" }} /><span>KhazanaScoop</span></Link>
         <h1>Admin login</h1>
         <p>Enter the store owner password to manage paid orders, stock, products, customers, and analytics.</p>
         <label>Password <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" autoFocus /></label>
@@ -259,7 +259,7 @@ function AdminShell() {
   return (
     <div className="admin-app">
       <aside className="admin-sidebar">
-        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>KhazanaScoop</span></Link>
+        <Link to="/" className="brand"><img src="/assets/logo.png" alt="Khazana Scoop Logo" style={{ height: "32px", width: "32px", borderRadius: "8px", objectFit: "cover", marginRight: "8px" }} /><span>KhazanaScoop</span></Link>
         <nav>
           <NavLink end to="/admin">Overview</NavLink>
           <NavLink to="/admin/orders">Orders</NavLink>
