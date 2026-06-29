@@ -167,7 +167,7 @@ function Storefront() {
     <>
       <header className="site-header">
         <button className="icon-button mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><span /><span /><span /></button>
-        <a className="brand" href="#home" aria-label="KhazanaScoop home"><img src="/assets/logo.png" alt="Logo" style={{ height: "32px", width: "32px", borderRadius: "50%", objectFit: "cover" }} /><span>KhazanaScoop</span></a>
+        <a className="brand" href="#home" aria-label="KhazanaScoop home"><span className="brand-mark">KS</span><span>KhazanaScoop</span></a>
         <nav className={`nav ${menuOpen ? "open" : ""}`}>
           <Link to="/shop">Shop All</Link><Link to="/products/mystery-scoop">Mystery Scoops</Link><Link to="/products/build-your-own-scoop">Build Your Scoop</Link><Link to="/about">About</Link><Link to="/profile">Account</Link>
         </nav>
@@ -241,7 +241,7 @@ function AdminLogin() {
   return (
     <main className="admin-login">
       <form className="checkout-card" onSubmit={submit}>
-        <Link to="/" className="brand"><img src="/assets/logo.png" alt="Logo" style={{ height: "32px", width: "32px", borderRadius: "50%", objectFit: "cover" }} /><span>KhazanaScoop</span></Link>
+        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>KhazanaScoop</span></Link>
         <h1>Admin login</h1>
         <p>Enter the store owner password to manage paid orders, stock, products, customers, and analytics.</p>
         <label>Password <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" autoFocus /></label>
@@ -259,7 +259,7 @@ function AdminShell() {
   return (
     <div className="admin-app">
       <aside className="admin-sidebar">
-        <Link to="/" className="brand"><img src="/assets/logo.png" alt="Logo" style={{ height: "32px", width: "32px", borderRadius: "50%", objectFit: "cover" }} /><span>KhazanaScoop</span></Link>
+        <Link to="/" className="brand"><span className="brand-mark">KS</span><span>KhazanaScoop</span></Link>
         <nav>
           <NavLink end to="/admin">Overview</NavLink>
           <NavLink to="/admin/orders">Orders</NavLink>
@@ -412,7 +412,7 @@ function VariantGrid({ variants, selectedId, onSelect }: { variants: Variant[]; 
 }
 
 function ReviewsAndFaq() {
-  return <><section className="section reviews"><div className="section-heading"><h2>Trusted by careful cutie shoppers</h2><p>Clear notes, gentle packing, and no fake urgency.</p></div><div className="review-grid"><article><div className="review-stars">★★★★★</div><h3>The box felt so personal.</h3><p>They avoided earrings and packed pink stationery exactly like my note.</p><footer><strong>Sarah T.</strong><em>Verified buyer</em></footer></article><article><div className="review-stars">★★★★★</div><h3>Perfect gift.</h3><p>My sister loved the medium scoop. The item count was clear before checkout.</p><footer><strong>Riya M.</strong><em>Verified buyer</em></footer></article><article><div className="review-stars">★★★★★</div><h3>No DM confusion.</h3><p>I could compare prices and order from my phone in a few minutes.</p><footer><strong>Ananya K.</strong><em>Verified buyer</em></footer></article></div></section><section className="section faq" id="faq"><div><h2>FAQ</h2><details open><summary>What is a mystery scoop?</summary><p>A surprise box with handpicked cute products. Designs and combinations vary.</p></details><details><summary>Can I choose products?</summary><p>Use Build Your Own for preferences. Mystery scoops stay surprise-based.</p></details><details><summary>Are mystery scoops returnable?</summary><p>They are non-returnable unless the product arrives damaged, wrong, or missing.</p></details></div><div className="policy-card" style={{ border: "2px solid var(--brand-pink)", padding: "16px", borderRadius: "8px", background: "var(--brand-pink-light)" }}><h3>⚠️ Important notes</h3><p><strong>Mystery scoops are surprise-based. Product designs, colours, and combinations may vary.</strong></p><p style={{ marginTop: "8px", color: "var(--teal-dark)", fontWeight: 600 }}>If you wanna claim damage or missing, you will have 48Hrs to share a proper unboxing video.</p></div></section></>;
+  return <><section className="section reviews"><div className="section-heading"><h2>Trusted by careful cutie shoppers</h2><p>Clear notes, gentle packing, and no fake urgency.</p></div><div className="review-grid"><article><div className="review-stars">★★★★★</div><h3>The box felt so personal.</h3><p>They avoided earrings and packed pink stationery exactly like my note.</p><footer><strong>Sarah T.</strong><em>Verified buyer</em></footer></article><article><div className="review-stars">★★★★★</div><h3>Perfect gift.</h3><p>My sister loved the medium scoop. The item count was clear before checkout.</p><footer><strong>Riya M.</strong><em>Verified buyer</em></footer></article><article><div className="review-stars">★★★★★</div><h3>No DM confusion.</h3><p>I could compare prices and order from my phone in a few minutes.</p><footer><strong>Ananya K.</strong><em>Verified buyer</em></footer></article></div></section><section className="section faq" id="faq"><div><h2>FAQ</h2><details open><summary>What is a mystery scoop?</summary><p>A surprise box with handpicked cute products. Designs and combinations vary.</p></details><details><summary>Can I choose products?</summary><p>Use Build Your Own for preferences. Mystery scoops stay surprise-based.</p></details><details><summary>Are mystery scoops returnable?</summary><p>They are non-returnable unless the product arrives damaged, wrong, or missing.</p></details></div><div className="policy-card"><h3>Important notes</h3><p><strong>Mystery scoops are surprise-based. Product designs, colours, and combinations may vary.</strong></p><p style={{ marginTop: "12px", color: "var(--teal-dark)", fontWeight: 700 }}>If you wanna claim damage or missing, you will have 48Hrs to share a proper unboxing video.</p></div></section></>;
 }
 
 function CartDrawer({ isOpen, cart, orderNote, subtotal, shipping, total, onClose, onNote, onQuantity, onCheckout }: { isOpen: boolean; cart: CartItem[]; orderNote: string; subtotal: number; shipping: number; total: number; onClose: () => void; onNote: (note: string) => void; onQuantity: (localId: string, delta: number) => void; onCheckout: () => void }) {

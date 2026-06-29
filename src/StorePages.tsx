@@ -112,7 +112,7 @@ function StoreHeader() {
     <div className="commerce-announce">{banner?.title ?? "Free shipping pan India"} <span>•</span> {banner?.message ?? "Packed with care"} <span>•</span> Prepaid orders</div>
     <header className="commerce-header">
       <button className="commerce-icon mobile-only" onClick={() => setMenuOpen((open) => !open)} aria-label="Open menu"><Menu /></button>
-      <Link className="commerce-brand" to="/"><img src="/assets/logo.png" alt="Logo" style={{ height: "24px", width: "24px", borderRadius: "50%", objectFit: "cover", marginRight: "8px" }} /><strong>KhazanaScoop</strong></Link>
+      <Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link>
       <form className="commerce-search" onSubmit={search}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search cute finds and gifts" /></form>
       <nav className={`commerce-actions ${menuOpen ? "open" : ""}`}>
         <NavLink to="/shop">Shop</NavLink>
@@ -127,7 +127,7 @@ function StoreHeader() {
 
 function StoreFooter() {
   return <footer className="commerce-footer">
-    <div><Link className="commerce-brand" to="/"><img src="/assets/logo.png" alt="Logo" style={{ height: "24px", width: "24px", borderRadius: "50%", objectFit: "cover", marginRight: "8px" }} /><strong>KhazanaScoop</strong></Link><p>Cute finds, mystery scoops and thoughtful little gifts, packed in India.</p></div>
+    <div><Link className="commerce-brand" to="/"><span>KS</span><strong>KhazanaScoop</strong></Link><p>Cute finds, mystery scoops and thoughtful little gifts, packed in India.</p></div>
     <div><strong>Shop</strong><Link to="/shop">All products</Link><Link to="/products/mystery-scoop">Mystery scoops</Link><Link to="/products/build-your-own-scoop">Build your scoop</Link></div>
     <div><strong>Customer care</strong><Link to="/my-orders">Track my order</Link><Link to="/faq">FAQ</Link><Link to="/contact">Contact us</Link><Link to="/returns">Returns</Link></div>
     <div><strong>Information</strong><Link to="/about">About us</Link><Link to="/shipping">Shipping policy</Link><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link></div>
