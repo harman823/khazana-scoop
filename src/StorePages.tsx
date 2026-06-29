@@ -328,11 +328,22 @@ export function ProductDetailPage() {
           {selected ? <div className="variant-rules"><strong>What this tier includes</strong><ul>{selected.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul><p>{selected.item_count}.</p></div> : null}
           {isBuildYourOwn ? <div className="byo-preferences"><strong>Build preferences</strong><div className="byo-limit-note"><strong>{byoLimits.label}</strong><span>{basicItemsCount}/{dynamicBasicLimit} basic items</span><span>{byoPreferences.premiumItems.length}/{byoLimits.premium} premium items</span></div><div className="byo-item-picker"><fieldset className="basic-items-column"><legend>Basic items</legend><p className="selection-count">Choose up to {dynamicBasicLimit} (Max 3 per item)</p><div className="byo-items-scroll">{byoBasicItemOptions.map((item) => { const qty = byoPreferences.basicItems[item] ?? 0; const locked = basicLimitReached && qty === 0; return <div className={locked ? "choice-disabled" : ""} key={item} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 800, fontSize: "13px", color: "var(--teal-dark)" }}><span>{item}</span><div className="quantity-stepper" style={{ gap: "6px" }}><button type="button" style={{ minWidth: "26px", height: "26px" }} onClick={() => updateByoBasicItem(item, -1)} disabled={qty === 0}>-</button><strong style={{ minWidth: "16px", textAlign: "center" }}>{qty}</strong><button type="button" style={{ minWidth: "26px", height: "26px" }} onClick={() => updateByoBasicItem(item, 1)} disabled={basicLimitReached || qty >= 3}>+</button></div></div>; })}</div></fieldset><fieldset className="premium-items-column"><legend>Premium items</legend><p className="selection-count">Choose up to {byoLimits.premium}</p><div className="byo-items-scroll">{byoPremiumItemOptions.map((item) => { const checked = byoPreferences.premiumItems.includes(item); const locked = premiumLimitReached && !checked; return <label className={locked ? "choice-disabled" : ""} key={item} style={{ margin: 0 }}><input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleByoPremiumItem(item)} /> {item}</label>; })}</div></fieldset></div></div> : null}
           {isBuildYourOwn || currentProduct.product_type === "mystery_scoop" ? (
-            <div className="add-ons-section" style={{ margin: "16px 0", padding: "16px", border: "1px solid var(--gray-border)", borderRadius: "8px", background: "#fcfdfe" }}>
-              <label style={{ display: "flex", gap: "8px", alignItems: "center", cursor: "pointer", fontWeight: 600, color: "var(--teal-dark)" }}>
-                <input type="checkbox" checked={instaVideo} onChange={(e) => setInstaVideo(e.target.checked)} />
-                Add Instagram Video to show your scoop (+₹50)
-              </label>
+            <div className="add-ons-section" style={{ margin: "16px 0" }}>
+              <div className="detail-options" style={{ gridTemplateColumns: "1fr", margin: "0" }}>
+                <button 
+                  type="button" 
+                  className={instaVideo ? "active" : ""} 
+                  onClick={() => setInstaVideo(!instaVideo)}
+                  style={{ minHeight: "auto", display: "flex", flexDirection: "row", alignItems: "center", gap: "12px", padding: "14px 16px" }}
+                >
+                  <div style={{ width: "20px", height: "20px", flexShrink: 0, borderRadius: "4px", border: instaVideo ? "none" : "1px solid #a3b1ad", background: instaVideo ? "#e85062" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease" }}>
+                    {instaVideo && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                  </div>
+                  <span style={{ fontWeight: 600, color: "var(--teal-dark)", fontSize: "14px" }}>
+                    Add Instagram Video to show your scoop (+₹50)
+                  </span>
+                </button>
+              </div>
               {isBuildYourOwn && (
                 <div style={{ marginTop: "16px" }}>
                   <label style={{ display: "block", marginBottom: "8px", fontWeight: 600, color: "var(--teal-dark)" }}>Preferences & Notes</label>
