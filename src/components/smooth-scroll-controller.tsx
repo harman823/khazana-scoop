@@ -61,9 +61,7 @@ export function SmoothScrollController(): null {
         if (
           node.classList.contains("scroll-stack-scroller") ||
           node.classList.contains("sm-home-panel") ||
-          node.classList.contains("testimonials-carousel") ||
-          node.classList.contains("carousel-content") ||
-          node.classList.contains("circular-gallery")
+          node.classList.contains("carousel-content")
         ) {
           return true;
         }

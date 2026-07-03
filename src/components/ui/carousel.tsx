@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 type CarouselContextValue = {
   contentRef: React.MutableRefObject<HTMLDivElement | null>;
   scrollByPage: (direction: "previous" | "next") => void;
+  motion: "idle" | "previous" | "next";
 };
 
 const CarouselContext = React.createContext<CarouselContextValue | null>(null);
@@ -34,6 +35,8 @@ export function Carousel({
   };
 }): React.ReactElement {
   const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const motionTimerRef = React.useRef<number | null>(null);
+  const [motion, setMotion] = React.useState<"idle" | "previous" | "next">("idle");
 
   const scrollByPage = React.useCallback((direction: "previous" | "next"): void => {
     const content = contentRef.current;
@@ -43,15 +46,31 @@ export function Carousel({
     const gap = Number.parseFloat(contentStyles.columnGap || contentStyles.gap || "0");
     const distance = firstItem ? firstItem.offsetWidth + gap : content.clientWidth;
 
+    if (motionTimerRef.current) {
+      window.clearTimeout(motionTimerRef.current);
+    }
+
+    setMotion(direction);
+    motionTimerRef.current = window.setTimeout(() => {
+      setMotion("idle");
+      motionTimerRef.current = null;
+    }, 520);
+
     content.scrollBy({
       behavior: "smooth",
       left: direction === "next" ? distance : -distance,
     });
   }, []);
 
+  React.useEffect(() => () => {
+    if (motionTimerRef.current) {
+      window.clearTimeout(motionTimerRef.current);
+    }
+  }, []);
+
   return (
-    <CarouselContext.Provider value={{ contentRef, scrollByPage }}>
-      <div className={cx("carousel", className)} data-align={opts?.align ?? "start"} {...props}>
+    <CarouselContext.Provider value={{ contentRef, motion, scrollByPage }}>
+      <div className={cx("carousel", className)} data-align={opts?.align ?? "start"} data-motion={motion} {...props}>
         {children}
       </div>
     </CarouselContext.Provider>
@@ -63,11 +82,11 @@ export function CarouselContent({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>): React.ReactElement {
-  const { contentRef } = useCarousel();
+  const { contentRef, motion } = useCarousel();
 
   return (
     <div
-      className={cx("carousel-content", className)}
+      className={cx("carousel-content", motion !== "idle" ? `carousel-content-${motion}` : undefined, className)}
       ref={contentRef}
       {...props}
     >

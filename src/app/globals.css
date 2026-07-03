@@ -134,6 +134,24 @@ textarea {
   padding: 2px 2px 20px;
 }
 
+.carousel-content-next .carousel-item {
+  animation: carousel-next-item 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.carousel-content-previous .carousel-item {
+  animation: carousel-previous-item 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.carousel-content-next .carousel-item:nth-child(2n),
+.carousel-content-previous .carousel-item:nth-child(2n) {
+  animation-delay: 35ms;
+}
+
+.carousel-content-next .carousel-item:nth-child(3n),
+.carousel-content-previous .carousel-item:nth-child(3n) {
+  animation-delay: 70ms;
+}
+
 .carousel-content::-webkit-scrollbar {
   display: none;
 }
@@ -173,6 +191,30 @@ textarea {
 
 .carousel-nav-next {
   right: -18px;
+}
+
+@keyframes carousel-next-item {
+  from {
+    opacity: 0.56;
+    transform: translate3d(28px, 0, 0) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes carousel-previous-item {
+  from {
+    opacity: 0.56;
+    transform: translate3d(-28px, 0, 0) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .button-primary,
@@ -883,125 +925,94 @@ textarea {
   text-shadow: 4px 4px 0 rgba(0, 184, 173, 0.28);
 }
 
-.product-gallery-frame {
+.product-carousel {
   position: relative;
   z-index: 1;
-  height: clamp(350px, 38vw, 560px);
-  margin-top: clamp(12px, 2vw, 24px);
+  margin-top: clamp(20px, 3vw, 34px);
+  padding: 0 clamp(18px, 5vw, 64px) clamp(28px, 5vw, 56px);
 }
 
-.product-gallery-frame .circular-gallery {
-  background: transparent;
+.product-carousel .carousel-content {
+  gap: clamp(16px, 2vw, 24px);
 }
 
-.circular-gallery {
-  position: relative;
-  width: 100%;
+.product-carousel-card {
   height: 100%;
-  overflow: hidden;
-  cursor: grab;
+  border-radius: 18px;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease;
+}
+
+.product-carousel-card:hover {
+  transform: translateY(-5px) rotate(-0.5deg);
+  box-shadow: 9px 9px 0 rgba(30, 41, 59, 0.18);
+}
+
+.product-carousel-card-pink {
   background:
-    linear-gradient(135deg, rgba(255, 226, 236, 0.7), rgba(223, 249, 247, 0.62)),
-    #fff8fb;
+    linear-gradient(135deg, rgba(255, 226, 236, 0.92), rgba(255, 253, 245, 0.96)),
+    #ffffff;
 }
 
-.circular-gallery:active {
-  cursor: grabbing;
+.product-carousel-card-teal {
+  background:
+    linear-gradient(135deg, rgba(223, 249, 247, 0.94), rgba(255, 253, 245, 0.96)),
+    #ffffff;
 }
 
-.circular-gallery:focus-visible {
-  outline: 3px solid rgba(247, 44, 123, 0.28);
-  outline-offset: -3px;
-}
-
-.circular-gallery canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.circular-gallery[data-ogl-ready="true"] .circular-gallery-fallback {
-  display: none;
-}
-
-.circular-gallery-fallback {
-  height: 100%;
-  overflow: hidden;
-  padding-block: 24px;
-}
-
-.circular-gallery-fallback::-webkit-scrollbar {
-  display: none;
-}
-
-.circular-gallery-fallback-track {
-  display: flex;
-  width: max-content;
-  height: 100%;
-  align-items: center;
-  gap: clamp(14px, 2vw, 28px);
-  padding-inline: clamp(18px, 4vw, 64px);
-  animation: circular-gallery-fallback-scroll 36s linear infinite;
-  transform: translate3d(0, 0, 0);
-  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
-}
-
-.product-gallery-section-teal .circular-gallery-fallback-track {
-  animation-direction: reverse;
-  animation-duration: 42s;
-}
-
-.circular-gallery-fallback:hover .circular-gallery-fallback-track,
-.circular-gallery-fallback:focus-within .circular-gallery-fallback-track {
-  animation-play-state: paused;
-}
-
-.circular-gallery-fallback-card {
+.product-carousel-link {
   display: grid;
-  width: clamp(230px, 26vw, 390px);
-  flex: 0 0 auto;
-  gap: 12px;
+  height: 100%;
   color: var(--foreground);
-  text-align: center;
-  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.circular-gallery-fallback-card:hover {
-  transform: translateY(-4px) rotate(-1deg);
-}
-
-.circular-gallery-fallback-media {
+.product-carousel-media {
   position: relative;
-  display: block;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  border: 2px solid var(--foreground);
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 226, 236, 0.9), rgba(223, 249, 247, 0.78));
-  box-shadow: 5px 5px 0 rgba(30, 41, 59, 0.24);
+  background: #fff8fb;
 }
 
-.circular-gallery-fallback-card:nth-child(even) .circular-gallery-fallback-media {
-  border-color: rgba(0, 184, 173, 0.28);
-  background: linear-gradient(135deg, rgba(223, 249, 247, 0.92), rgba(255, 226, 236, 0.78));
+.product-carousel-media img {
+  transform: scale(1.08);
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.circular-gallery-fallback-label {
-  font-size: clamp(18px, 2vw, 26px);
-  font-weight: 900;
+.product-carousel-card:hover .product-carousel-media img {
+  transform: scale(1.14);
+}
+
+.product-carousel-copy {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 18px;
+}
+
+.product-carousel-copy p,
+.product-carousel-copy h3,
+.product-carousel-copy span {
+  margin: 0;
+}
+
+.product-carousel-copy p {
+  color: var(--strawberry);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.product-carousel-card-teal .product-carousel-copy p {
+  color: var(--teal-dark);
+}
+
+.product-carousel-copy h3 {
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+  font-weight: 950;
   line-height: 1;
-  text-shadow: 2px 2px 0 rgba(251, 191, 36, 0.32);
 }
 
-@keyframes circular-gallery-fallback-scroll {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
+.product-carousel-copy span {
+  font-size: 15px;
+  font-weight: 950;
 }
 
 .showreel-carousel {
@@ -2020,7 +2031,6 @@ textarea {
     transform: none;
   }
 
-  .circular-gallery-fallback-track,
   .carousel-content {
     animation: none;
     scroll-behavior: auto;
@@ -2261,24 +2271,6 @@ textarea {
 
   .product-gallery-heading .button-secondary {
     width: fit-content;
-  }
-
-  .product-gallery-frame {
-    height: 330px;
-  }
-
-  .circular-gallery-fallback {
-    align-items: center;
-    padding-block: 18px;
-  }
-
-  .circular-gallery-fallback-track {
-    padding-inline: 18px;
-    animation-duration: 32s;
-  }
-
-  .circular-gallery-fallback-card {
-    width: min(76vw, 300px);
   }
 
   .sm-home-body {

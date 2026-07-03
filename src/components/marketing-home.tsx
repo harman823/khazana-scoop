@@ -15,7 +15,6 @@ import {
   Star,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import CircularGallery from "./circular-gallery";
 import { EcommerceFooter } from "./ecommerce-footer";
 import { PillNav } from "./pill-nav";
 import { StaggeredMenu } from "./staggered-menu";
@@ -218,15 +217,11 @@ export function MarketingHome({
           title="Best sellers"
           tone="pink"
           products={bestSellerProducts}
-          bend={2.8}
-          scrollSpeed={1.05}
         />
         <ProductGallerySection
           title="Our best attractions"
           tone="teal"
           products={attractionProducts}
-          bend={-2.4}
-          scrollSpeed={0.9}
         />
       </section>
 
@@ -303,14 +298,10 @@ function ProductGallerySection({
   title,
   tone,
   products,
-  bend,
-  scrollSpeed,
 }: {
   title: string;
   tone: "pink" | "teal";
   products: typeof featuredProducts;
-  bend: number;
-  scrollSpeed: number;
 }): React.ReactElement {
   return (
     <section className={`product-gallery-section product-gallery-section-${tone}`}>
@@ -318,21 +309,36 @@ function ProductGallerySection({
         <h2>{title}</h2>
         <Link className="button-secondary" href="/products">View all products</Link>
       </div>
-      <div className="product-gallery-frame">
-        <CircularGallery
-          items={products.map((product) => ({
-            href: product.route,
-            image: product.image,
-            text: product.name,
-          }))}
-          bend={bend}
-          borderRadius={0.07}
-          font="bold 34px Arial"
-          scrollEase={0.022}
-          scrollSpeed={scrollSpeed}
-          textColor="#1e293b"
-        />
-      </div>
+      <Carousel opts={{ align: "start" }} className="product-carousel">
+        <CarouselContent>
+          {products.map((product) => (
+            <CarouselItem className="basis-[86%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4" key={product.slug}>
+              <Card className={`product-carousel-card product-carousel-card-${product.accent}`}>
+                <CardContent className="p-0">
+                  <Link className="product-carousel-link" href={product.route}>
+                    <div className="product-carousel-media">
+                      <Image
+                        alt={product.name}
+                        fill
+                        src={product.image}
+                        className="object-cover"
+                        sizes="(max-width: 640px) 86vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                    </div>
+                    <div className="product-carousel-copy">
+                      <p>{product.eyebrow}</p>
+                      <h3>{product.name}</h3>
+                      <span>{product.priceLabel}</span>
+                    </div>
+                  </Link>
+                </CardContent>
+              </Card>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
     </section>
   );
 }
