@@ -10,6 +10,7 @@ type CarouselContextValue = {
 };
 
 const CarouselContext = React.createContext<CarouselContextValue | null>(null);
+const MOTION_DURATION_MS = 760;
 
 function cx(...classes: Array<string | undefined>): string {
   return classes.filter(Boolean).join(" ");
@@ -36,15 +37,28 @@ export function Carousel({
 }): React.ReactElement {
   const contentRef = React.useRef<HTMLDivElement | null>(null);
   const motionTimerRef = React.useRef<number | null>(null);
+  const animationFrameRef = React.useRef<number | null>(null);
   const [motion, setMotion] = React.useState<"idle" | "previous" | "next">("idle");
+
+  const stopScrollAnimation = React.useCallback((): void => {
+    if (animationFrameRef.current) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
 
   const scrollByPage = React.useCallback((direction: "previous" | "next"): void => {
     const content = contentRef.current;
     if (!content) return;
+    stopScrollAnimation();
     const firstItem = content.querySelector<HTMLElement>(".carousel-item");
     const contentStyles = window.getComputedStyle(content);
     const gap = Number.parseFloat(contentStyles.columnGap || contentStyles.gap || "0");
     const distance = firstItem ? firstItem.offsetWidth + gap : content.clientWidth;
+    const start = content.scrollLeft;
+    const maxLeft = content.scrollWidth - content.clientWidth;
+    const target = Math.min(Math.max(start + (direction === "next" ? distance : -distance), 0), maxLeft);
+    const startTime = window.performance.now();
 
     if (motionTimerRef.current) {
       window.clearTimeout(motionTimerRef.current);
@@ -54,19 +68,31 @@ export function Carousel({
     motionTimerRef.current = window.setTimeout(() => {
       setMotion("idle");
       motionTimerRef.current = null;
-    }, 520);
+    }, MOTION_DURATION_MS);
 
-    content.scrollBy({
-      behavior: "smooth",
-      left: direction === "next" ? distance : -distance,
-    });
-  }, []);
+    const tick = (now: number): void => {
+      const progress = Math.min((now - startTime) / MOTION_DURATION_MS, 1);
+      const eased = 1 - Math.pow(1 - progress, 4);
+      content.scrollLeft = start + (target - start) * eased;
+
+      if (progress < 1) {
+        animationFrameRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      content.scrollLeft = target;
+      animationFrameRef.current = null;
+    };
+
+    animationFrameRef.current = window.requestAnimationFrame(tick);
+  }, [stopScrollAnimation]);
 
   React.useEffect(() => () => {
+    stopScrollAnimation();
     if (motionTimerRef.current) {
       window.clearTimeout(motionTimerRef.current);
     }
-  }, []);
+  }, [stopScrollAnimation]);
 
   return (
     <CarouselContext.Provider value={{ contentRef, motion, scrollByPage }}>
