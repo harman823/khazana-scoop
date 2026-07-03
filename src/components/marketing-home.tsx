@@ -124,17 +124,14 @@ export function MarketingHome({
   return (
     <main>
       <section className="hero-video-section" id="scoops">
-        <video
-          aria-label="Mystery Scoop collectible assortment background video"
-          autoPlay
+        <Image
+          alt="Mystery Scoop collectible assortment"
           className="hero-video"
-          loop
-          muted
-          playsInline
-          poster="/mystery-scoop-hero.png"
-        >
-          <source src="/mystery-scoop-hero.mp4" type="video/mp4" />
-        </video>
+          fill
+          priority
+          sizes="100vw"
+          src="/mystery-scoop-hero.png"
+        />
         <div className="hero-dim-layer" />
 
         <header className="hero-nav shell">
