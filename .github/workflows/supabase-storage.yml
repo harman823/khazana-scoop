@@ -1,0 +1,30 @@
+name: Supabase Storage Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub environment to configure storage against
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  storage:
+    name: Create buckets and policies
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      SUPABASE_DIRECT_DATABASE_URL: ${{ secrets.SUPABASE_DIRECT_DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+
+      - name: Apply storage bucket SQL
+        run: psql "$SUPABASE_DIRECT_DATABASE_URL" --set ON_ERROR_STOP=1 --file supabase/storage-buckets.sql

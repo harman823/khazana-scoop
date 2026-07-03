@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  AWAITING_APPROVAL
+  SCOOPED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum AddOnType {
+  RE_SCOOP
+  THEME_GUARANTEE
+  LUCKY_CAPSULE
+}
+
+enum StorageAssetKind {
+  PRODUCT_IMAGE
+  INVENTORY_IMAGE
+  SCOOP_PHOTO
+  PACKING_VIDEO
+  PROFILE_AVATAR
+  REVIEW_IMAGE
+}
+
+model User {
+  id                String              @id @default(cuid())
+  email             String              @unique
+  passwordHash      String
+  name              String
+  role              Role                @default(USER)
+  scoopPoints       Int                 @default(0)
+  address           String?
+  createdAt         DateTime            @default(now())
+  sessions          Session[]
+  orders            Order[]
+  pointsLedger      ScoopPointsLedger[]
+  reviews           Review[]
+  storageAssets     StorageAsset[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ScoopTier {
+  id            String      @id @default(cuid())
+  name          String      @unique
+  priceCents    Int
+  baseVolumeMl  Int
+  imageUrl      String
+  description   String
+  active        Boolean     @default(true)
+  orderItems    OrderItem[]
+  mediaAssets   StorageAsset[]
+}
+
+model BulkInventory {
+  id                String   @id @default(cuid())
+  itemName          String
+  category          String
+  totalWeightGrams  Int
+  reservedGrams     Int      @default(0)
+  lowStockThreshold Int
+  imageUrl          String?
+  updatedAt         DateTime @updatedAt
+  mediaAssets       StorageAsset[]
+
+  @@index([category])
+}
+
+model AddOn {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  priceCents  Int
+  type        AddOnType
+  description String
+  active      Boolean     @default(true)
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id               String              @id @default(cuid())
+  userId           String
+  status           OrderStatus         @default(PENDING)
+  packingVideoUrl  String?
+  scoopPhotoUrl    String?
+  totalCents       Int
+  reScoopLimit     Int                 @default(1)
+  reScoopCount     Int                 @default(0)
+  approvalExpiresAt DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items            OrderItem[]
+  payment          Payment?
+  shipping         Shipping?
+  pointsLedger     ScoopPointsLedger[]
+  reviews          Review[]
+  mediaAssets       StorageAsset[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id          String     @id @default(cuid())
+  orderId     String
+  tierId      String?
+  addOnId     String?
+  quantity    Int        @default(1)
+  priceCents  Int
+  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tier        ScoopTier? @relation(fields: [tierId], references: [id])
+  addOn       AddOn?     @relation(fields: [addOnId], references: [id])
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                      String   @id @default(cuid())
+  orderId                 String   @unique
+  provider                String
+  providerCheckoutSession String?
+  status                  String
+  amountCents             Int
+  createdAt               DateTime @default(now())
+  order                   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Shipping {
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  recipientName  String
+  address        String
+  city           String
+  region         String
+  postalCode     String
+  country        String
+  trackingNumber String?
+  createdAt      DateTime @default(now())
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  orderId   String
+  rating    Int
+  body      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model ScoopPointsLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  orderId   String?
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+model StorageAsset {
+  id          String           @id @default(cuid())
+  bucket      String
+  path        String
+  publicUrl   String?
+  mimeType    String
+  sizeBytes   Int?
+  kind        StorageAssetKind
+  ownerId     String?
+  orderId     String?
+  inventoryId String?
+  tierId      String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  owner       User?            @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  order       Order?           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventory   BulkInventory?   @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
+  tier        ScoopTier?       @relation(fields: [tierId], references: [id], onDelete: SetNull)
+
+  @@unique([bucket, path])
+  @@index([kind])
+  @@index([ownerId])
+  @@index([orderId])
+  @@index([inventoryId])
+  @@index([tierId])
+}
