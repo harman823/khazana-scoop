@@ -32,8 +32,8 @@ export function About() {
         <motion.div variants={itemVariants} className="relative">
           <div className="aspect-[4/5] rounded-[1.75rem] sm:rounded-[3rem] overflow-hidden relative z-10 shadow-[0_8px_32px_rgba(88,88,88,0.05)]">
             <img
-              src="/img/stones_healing_alt.png"
-              alt="Meditation stones"
+              src="/img/founder-portrait.png"
+              alt="Founder of KosmicAlign"
               className="w-full h-full object-cover"
             />
           </div>
