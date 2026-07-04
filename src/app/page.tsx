@@ -1,12 +1,10 @@
 import { MarketingHome } from "@/components/marketing-home";
-import { addOns, currentUser, demoOrders } from "@/lib/data";
+import { getStorefrontCatalogHomeData } from "@/lib/catalog";
 
-export default function Home(): React.ReactElement {
-  return (
-    <MarketingHome
-      addOns={addOns}
-      currentUser={currentUser}
-      orders={demoOrders}
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function Home(): Promise<React.ReactElement> {
+  const homeData = await getStorefrontCatalogHomeData();
+
+  return <MarketingHome homeData={homeData} />;
 }

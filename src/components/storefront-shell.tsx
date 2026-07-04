@@ -3,19 +3,6 @@
 import Link from "next/link";
 import { CircleUserRound, MapPin, Search, ShoppingBag } from "lucide-react";
 
-const announcementItems = [
-  "PACKING VIDEOS AVAILABLE ON SELECT ORDERS",
-  "RE-SCOOP OPTION AVAILABLE WHEN ENABLED",
-  "EARN SCOOP POINTS ON EVERY ORDER",
-];
-
-const navItems = [
-  { label: "Products", href: "/products" },
-  { label: "Mystery Scoops", href: "/mystery-scoops" },
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
-];
-
 const footerColumns = [
   {
     title: "Shop",

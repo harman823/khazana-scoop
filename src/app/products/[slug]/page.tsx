@@ -4,7 +4,7 @@ import { Check, ShoppingCart, Sparkles } from "lucide-react";
 import { notFound } from "next/navigation";
 import type React from "react";
 import { StorefrontFooter, StorefrontHeader, StorefrontSectionTitle } from "@/components/storefront-shell";
-import { featuredProducts, getProductBySlug } from "@/lib/products";
+import { getStorefrontCatalogProductBySlug } from "@/lib/catalog";
 
 type ProductPageProps = {
   params: Promise<{
@@ -12,17 +12,14 @@ type ProductPageProps = {
   }>;
 };
 
-export function generateStaticParams(): { slug: string }[] {
-  return featuredProducts
-    .filter((product) => product.slug !== "mystery-scoops")
-    .map((product) => ({ slug: product.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function ProductPage({ params }: ProductPageProps): Promise<React.ReactElement> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getStorefrontCatalogProductBySlug(slug);
+  const canOrderCatalogProduct = product?.id && product.id > 0 && product.effectivePrice !== null;
 
-  if (!product || product.slug === "mystery-scoops") {
+  if (!product) {
     notFound();
   }
 
@@ -45,11 +42,18 @@ export default async function ProductPage({ params }: ProductPageProps): Promise
                 {product.name}
               </h1>
               <p className="mt-6 max-w-[560px] text-base leading-8 text-[#627771] sm:text-lg">{product.description}</p>
-              <p className="mt-6 text-base font-black uppercase tracking-[0.18em] text-[#18a59e]">{product.priceLabel}</p>
+              <div className="mt-6 flex flex-col gap-1">
+                <p className="text-base font-black uppercase tracking-[0.18em] text-[#18a59e]">{product.priceLabel}</p>
+                {product.originalPriceLabel ? (
+                  <p className="text-sm text-[#8b9b97] line-through">{product.originalPriceLabel}</p>
+                ) : null}
+              </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link className="button-primary focus-ring" href="/checkout">
-                  Add to cart <ShoppingCart size={17} />
-                </Link>
+                {canOrderCatalogProduct ? (
+                  <Link className="button-primary focus-ring" href={`${product.route}/buy`}>
+                    Order this item <ShoppingCart size={17} />
+                  </Link>
+                ) : null}
                 <Link className="button-secondary focus-ring" href="/mystery-scoops">
                   Build a mystery scoop <Sparkles size={17} />
                 </Link>
@@ -74,7 +78,10 @@ export default async function ProductPage({ params }: ProductPageProps): Promise
         <div className="rounded-[32px] border border-[#ece3d9] bg-white px-6 py-8 shadow-[0_24px_58px_rgba(118,140,134,0.12)]">
           <StorefrontSectionTitle>What is inside</StorefrontSectionTitle>
           <div className="grid gap-4 md:grid-cols-3">
-            {product.highlights.map((highlight) => (
+            {(product.highlights.length > 0
+              ? product.highlights
+              : ["Freshly synced from the dashboard", "Ready for category merchandising", "Collection-ready listing"]
+            ).map((highlight) => (
               <div className="rounded-[26px] border border-[#ece3d9] bg-[#fffcf8] p-5" key={highlight}>
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-[#f0fbfa] text-[#0ea69f]">
                   <Check size={18} />
@@ -83,6 +90,34 @@ export default async function ProductPage({ params }: ProductPageProps): Promise
               </div>
             ))}
           </div>
+          {product.availableColours.length > 0 ? (
+            <div className="mt-8">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#728781]">Available colours</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {product.availableColours.map((colour) => (
+                  <span className="storefront-mini-pill" key={colour}>
+                    {colour}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {product.collections.length > 0 ? (
+            <div className="mt-8">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#728781]">Collections</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {product.collections.map((collection) => (
+                  <Link
+                    href={`/products?collection=${collection.slug}`}
+                    className="storefront-mini-pill"
+                    key={collection.slug}
+                  >
+                    {collection.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 
