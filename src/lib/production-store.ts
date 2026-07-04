@@ -10,7 +10,7 @@ import {
   type ScoopTier as PrismaScoopTier,
   type User,
 } from "@prisma/client";
-import { addOns, inventoryItems, scoopTiers } from "@/lib/data";
+import { addOns, demoOrders, inventoryItems, scoopTiers } from "@/lib/data";
 import { getPrisma, hasDatabaseUrl } from "@/lib/clients";
 import { SHIPPING_CENTS } from "@/lib/pricing";
 import type { AddOn, CartLine, CartSelection, CartSummary, CustomerOrder, InventoryItem, OrderStatus, ScoopTier, UserProfile } from "@/lib/types";
@@ -270,6 +270,9 @@ export async function createOrder(userId: string, selection: CartSelection): Pro
 }
 
 export async function listOrders(userId?: string): Promise<CustomerOrder[]> {
+  if (!hasDatabaseUrl()) {
+    return demoOrders;
+  }
   requireDatabase();
   const prisma = getPrisma();
   const orders = await prisma.order.findMany({
@@ -285,6 +288,9 @@ export async function listOrders(userId?: string): Promise<CustomerOrder[]> {
 }
 
 export async function getOrder(orderId: string): Promise<CustomerOrder | null> {
+  if (!hasDatabaseUrl()) {
+    return demoOrders.find((order) => order.id === orderId) ?? null;
+  }
   requireDatabase();
   const prisma = getPrisma();
   const order = await prisma.order.findUnique({
@@ -361,6 +367,9 @@ export async function triggerReScoop(orderId: string): Promise<CustomerOrder | n
 }
 
 export async function listInventory(): Promise<InventoryItem[]> {
+  if (!hasDatabaseUrl()) {
+    return inventoryItems;
+  }
   await ensureCatalogSeed();
   const rows = await getPrisma().bulkInventory.findMany({ orderBy: { itemName: "asc" } });
   return rows.map(toInventoryItem);

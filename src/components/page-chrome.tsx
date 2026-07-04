@@ -1,42 +1,40 @@
-import { EcommerceFooter } from "./ecommerce-footer";
-import { PillNav } from "./pill-nav";
-
-const pageNavItems = [
-  { label: "Products", href: "/products" },
-  { label: "Scoops", href: "/mystery-scoops" },
-  { label: "Cart", href: "/cart" },
-  { label: "Orders", href: "/orders" },
-  { label: "Profile", href: "/profile" },
-  { label: "Admin", href: "/admin" },
-];
+import { StorefrontFooter, StorefrontPageHero } from "@/components/storefront-shell";
 
 export function PageChrome({
   children,
+  currentPath,
+  heroAside,
   title,
   subtitle,
 }: {
   children: React.ReactNode;
+  currentPath?: string;
+  heroAside?: React.ReactNode;
   title: string;
   subtitle: string;
 }): React.ReactElement {
   return (
-    <main className="min-h-screen">
-      <header className="shell page-pill-header">
-        <PillNav
-          baseColor="#1e293b"
-          className="page-pill-nav"
-          hoveredPillTextColor="#ffffff"
-          items={pageNavItems}
-          pillColor="#fffdf5"
-          pillTextColor="#1e293b"
-        />
-      </header>
-      <section className="shell py-8">
-        <h1 className="text-5xl font-black leading-tight">{title}</h1>
-        <p className="mt-3 max-w-2xl text-lg leading-8 text-muted">{subtitle}</p>
-      </section>
-      <section className="shell">{children}</section>
-      <EcommerceFooter />
+    <main className="min-h-screen pb-10">
+      <StorefrontPageHero currentPath={currentPath} subtitle={subtitle} title={title}>
+        {heroAside ?? (
+          <div className="grid w-full max-w-[340px] gap-4 sm:grid-cols-2">
+            {[
+              { title: "Packed with care", body: "From curated scoops to tracked delivery updates." },
+              { title: "Easy to revisit", body: "Orders, profiles, and customer help stay within reach." },
+            ].map((item) => (
+              <div
+                className="rounded-[28px] border border-white/75 bg-white/80 p-5 shadow-[0_20px_44px_rgba(124,146,140,0.14)] backdrop-blur"
+                key={item.title}
+              >
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-[#6d807a]">{item.title}</p>
+                <p className="mt-3 text-sm leading-6 text-[#5d746d]">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </StorefrontPageHero>
+      <section className="shell mt-8">{children}</section>
+      <StorefrontFooter />
     </main>
   );
 }

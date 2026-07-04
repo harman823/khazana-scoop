@@ -1,75 +1,68 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Sparkles, Star } from "lucide-react";
-import { BrandMark } from "@/components/brand-mark";
+import { Sparkles, Star } from "lucide-react";
 import { ScoopPreferencesBuilder } from "@/components/product/scoop-preferences-builder";
+import { StorefrontFooter, StorefrontPageHero, StorefrontSectionTitle } from "@/components/storefront-shell";
 
 export default function MysteryScoopsPage(): React.ReactElement {
   return (
-    <main className="min-h-screen pb-16">
-      <header className="shell flex min-h-20 items-center justify-between gap-4 py-4">
-        <BrandMark />
-        <nav className="hidden items-center gap-8 text-sm font-black md:flex">
-          <Link href="/">Home</Link>
-          <Link href="/mystery-scoops">Mystery scoops</Link>
-          <Link href="/cart">Cart</Link>
-        </nav>
-        <Link className="button-primary h-14 w-14 p-0" href="/cart" aria-label="Open cart">
-          <ShoppingCart size={27} strokeWidth={2.5} />
-        </Link>
-      </header>
-
-      <section className="shell grid gap-8 pt-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-        <div>
-          <h1 className="max-w-[650px] text-5xl font-black leading-[1.02] tracking-normal sm:text-7xl">
-            Mystery scoops packed for pure surprise.
-          </h1>
-          <p className="mt-6 max-w-[560px] text-lg leading-8 text-muted">
-            Choose your scoop size, then let the pack team pull a joyful mix of charms, crystals,
-            stationery, miniatures, lucky capsules, and tiny collectible treasures.
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a className="button-primary focus-ring" href="#choose-size">
-              Choose size <Sparkles size={17} />
-            </a>
-            <Link className="button-secondary focus-ring" href="/cart">
-              Add to cart
-            </Link>
-          </div>
-          <div className="mt-8 grid max-w-[620px] gap-4 sm:grid-cols-3">
-            {[
-              ["Different every time", "No two scoops match"],
-              ["Packed on video", "Watch the reveal"],
-              ["Re-scoop option", "Try again if enabled"],
-            ].map(([title, body]) => (
-              <div className="flex items-center gap-3" key={title}>
-                <span className="grid h-9 w-9 place-items-center rounded-[7px] bg-[#fff0b8] text-[#c98308]">
-                  <Star size={17} fill="currentColor" />
-                </span>
-                <span>
-                  <span className="block text-sm font-black">{title}</span>
-                  <span className="block text-xs text-muted">{body}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative min-h-[420px] overflow-hidden rounded-[8px] bg-[#fff1f6]">
+    <main className="min-h-screen pb-10">
+      <StorefrontPageHero
+        currentPath="/mystery-scoops"
+        subtitle="Choose your scoop size, then let the pack team pull a joyful mix of charms, crystals, stationery, miniatures, lucky capsules, and tiny collectible treasures."
+        title="Mystery scoops packed for pure surprise."
+      >
+        <div className="relative h-[260px] w-full max-w-[360px] overflow-hidden rounded-[30px] border border-white/75 bg-white/65 shadow-[0_22px_52px_rgba(118,140,134,0.12)]">
           <Image
             alt="Pastel scoop filled with tiny mystery collectibles"
             className="object-cover"
             fill
             priority
+            sizes="360px"
             src="/mystery-scoop-hero.png"
-            sizes="(min-width: 1024px) 50vw, 100vw"
           />
+        </div>
+      </StorefrontPageHero>
+
+      <section className="shell pt-8">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            ["Different every time", "No two scoops match."],
+            ["Packed on video", "Watch the reveal when available."],
+            ["Re-scoop option", "Try again if the add-on is enabled."],
+          ].map(([title, body]) => (
+            <div className="rounded-[28px] border border-[#FFE2E2] bg-white p-5 shadow-[0_18px_48px_rgba(118,140,134,0.12)]" key={title}>
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#FFE2E2] text-[#C5B3D3]">
+                <Star size={17} fill="currentColor" />
+              </span>
+              <h2 className="mt-4 text-2xl font-baloo text-[#1e293b]">{title}</h2>
+              <p className="mt-2 text-sm leading-7 font-poppins text-[#1e293b]/70">{body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section id="choose-size" className="shell border-t border-[#efe4e8] pt-12 mt-12">
-        <ScoopPreferencesBuilder />
+      <section className="shell pt-12">
+        <div className="rounded-[32px] border border-[#FFE2E2] bg-white px-6 py-8 shadow-[0_24px_58px_rgba(118,140,134,0.12)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <StorefrontSectionTitle>Build your scoop preferences</StorefrontSectionTitle>
+              <p className="-mt-2 max-w-3xl text-base leading-8 font-poppins text-[#1e293b]/70">
+                Move through size, mix, and add-on choices in one place, then keep heading toward cart and checkout when your surprise blend feels right.
+              </p>
+            </div>
+            <Link className="px-6 py-3 bg-[#C5B3D3] hover:bg-[#1e293b] text-white font-baloo font-bold rounded-full transition-colors inline-flex items-center gap-2" href="/cart">
+              Add to cart <Sparkles size={17} />
+            </Link>
+          </div>
+
+          <div className="mt-8 border-t border-[#FFE2E2] pt-8">
+            <ScoopPreferencesBuilder />
+          </div>
+        </div>
       </section>
+
+      <StorefrontFooter />
     </main>
   );
 }
