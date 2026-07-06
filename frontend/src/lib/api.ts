@@ -105,3 +105,34 @@ export const fetchAdminDashboard = async (adminKey: string) => {
 
   return response.json();
 };
+
+export const fetchAutomationStatus = async (adminKey: string) => {
+  const response = await fetch('/api/v1/automations/status', {
+    headers: {
+      'x-admin-key': adminKey,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || 'Failed to fetch automation status');
+  }
+
+  return response.json();
+};
+
+export const triggerInventoryPoll = async (adminKey: string) => {
+  const response = await fetch('/api/v1/automations/inventory/poll', {
+    method: 'POST',
+    headers: {
+      'x-admin-key': adminKey,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || 'Failed to trigger inventory poll');
+  }
+
+  return response.json();
+};

@@ -166,3 +166,35 @@ model WebhookEvent {
 
   @@index([eventId])
 }
+model BulkInventory {
+  id                 String   @id @default(cuid())
+  sku                String   @unique
+  name               String
+  totalWeightGrams   Int
+  reservedGrams      Int      @default(0)
+  lowStockThreshold  Int
+  alertEmail         String?
+  alertWebhookUrl    String?
+  lastAlertedAt      DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([sku])
+}
+
+model AutomationRun {
+  id          String   @id @default(cuid())
+  type        String
+  status      String
+  source      String?
+  recipient   String?
+  subject     String?
+  payload     Json?
+  errorStr    String?
+  createdAt   DateTime @default(now())
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+

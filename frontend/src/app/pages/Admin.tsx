@@ -2,16 +2,20 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   AlertCircle,
+  Bot,
   CalendarDays,
   IndianRupee,
   Lock,
   LogOut,
+  MailCheck,
+  PackageSearch,
   RefreshCw,
   ShieldCheck,
   TrendingUp,
   Users,
+  Workflow,
 } from "lucide-react";
-import { fetchAdminDashboard } from "../../lib/api";
+import { fetchAdminDashboard, fetchAutomationStatus, triggerInventoryPoll } from "../../lib/api";
 
 const DEFAULT_TIMEZONE = "Asia/Kolkata";
 
@@ -84,6 +88,41 @@ type AdminDashboard = {
   recentBookings: BookingRecord[];
   upcomingSchedule: BookingRecord[];
   scheduleLoad: ScheduleLoad[];
+};
+type AutomationRun = {
+  id: string;
+  type: string;
+  status: string;
+  source: string | null;
+  recipient: string | null;
+  subject: string | null;
+  errorStr: string | null;
+  createdAt: string;
+};
+
+type InventoryRecord = {
+  id: string;
+  sku: string;
+  name: string;
+  totalWeightGrams: number;
+  reservedGrams: number;
+  lowStockThreshold: number;
+  availableGrams: number;
+  isLowStock: boolean;
+  lastAlertedAt: string | null;
+};
+
+type AutomationStatus = {
+  config: {
+    orderWebhookUrl: string | null;
+    ollamaBaseUrl: string | null;
+    ollamaModel: string;
+    emailProvider: string;
+    backendOrderWebhookPath: string;
+    inventoryPollPath: string;
+  };
+  recentRuns: AutomationRun[];
+  inventory: InventoryRecord[];
 };
 
 const formatCurrency = (amount: number) =>
@@ -160,6 +199,79 @@ function MetricCard({
   );
 }
 
+
+function AutomationPanel({
+  status,
+  onPollInventory,
+  isPolling,
+}: {
+  status: AutomationStatus | null;
+  onPollInventory: () => void;
+  isPolling: boolean;
+}) {
+  if (!status) return null;
+
+  const connectedSteps = [
+    { icon: Workflow, label: "Order Webhook", value: status.config.orderWebhookUrl || status.config.backendOrderWebhookPath },
+    { icon: Bot, label: "LangGraph/Ollama", value: `${status.config.ollamaModel} at ${status.config.ollamaBaseUrl || "not configured"}` },
+    { icon: MailCheck, label: "Email Provider", value: status.config.emailProvider.toUpperCase() },
+    { icon: PackageSearch, label: "Inventory Poll", value: status.config.inventoryPollPath },
+  ];
+
+  return (
+    <section className="space-y-6 rounded-[1.75rem] sm:rounded-[3rem] bg-white p-5 sm:p-8 shadow-[0_8px_32px_rgba(88,88,88,0.03)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#C56D45]">Automation</p>
+          <h2 className="mt-3 text-3xl font-semibold text-[#585858]">LangGraph, Ollama, email, and inventory flow</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#7A7A7A]">
+            Orders enter directly through the LangGraph webhook. The graph reads the order items array, calls Ollama for the thank-you email, sends through the configured email provider, and records the run in Supabase/Postgres. A separate LangGraph inventory graph checks BulkInventory and alerts when available grams fall below threshold.
+          </p>
+        </div>
+        <button type="button" onClick={onPollInventory} disabled={isPolling} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#E84C3D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#C0392B] disabled:cursor-not-allowed disabled:opacity-60">
+          <PackageSearch className="h-4 w-4" />
+          {isPolling ? "Polling..." : "Poll Inventory"}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {connectedSteps.map(({ icon: Icon, label, value }) => (
+          <article key={label} className="rounded-[1.5rem] bg-[#FFF5EA] p-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm"><Icon className="h-5 w-5 text-[#E84C3D]" /></div>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-[#7A7A7A]">{label}</p>
+            <p className="mt-2 break-words text-sm font-semibold text-[#585858]">{value}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="rounded-[1.5rem] bg-[#FFF5EA] p-5">
+          <h3 className="text-xl font-semibold text-[#585858]">Bulk inventory</h3>
+          <div className="mt-4 space-y-3">
+            {status.inventory.length === 0 ? <p className="text-sm text-[#7A7A7A]">No BulkInventory rows found yet.</p> : status.inventory.map((item) => (
+              <div key={item.id} className="rounded-[1.25rem] bg-white px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-[#585858]">{item.name}</p><p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#7A7A7A]">{item.sku}</p></div><StatusChip label={item.isLowStock ? "LOW" : "OK"} /></div>
+                <p className="mt-3 text-sm text-[#7A7A7A]">{item.availableGrams}g available from {item.totalWeightGrams}g total, threshold {item.lowStockThreshold}g.</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] bg-[#FFF5EA] p-5">
+          <h3 className="text-xl font-semibold text-[#585858]">Recent automation runs</h3>
+          <div className="mt-4 space-y-3">
+            {status.recentRuns.length === 0 ? <p className="text-sm text-[#7A7A7A]">No automation runs have been recorded yet.</p> : status.recentRuns.map((run) => (
+              <div key={run.id} className="rounded-[1.25rem] bg-white px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-[#585858]">{run.type}</p><p className="mt-1 text-sm text-[#7A7A7A]">{run.recipient || run.source || "System"}</p></div><StatusChip label={run.status} /></div>
+                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#7A7A7A]">{formatDateTime(run.createdAt)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 function StatusChip({ label }: { label: string }) {
   return (
     <span
@@ -177,9 +289,11 @@ export function Admin() {
   const [password, setPassword] = useState("");
   const [activePassword, setActivePassword] = useState("");
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
+  const [automationStatus, setAutomationStatus] = useState<AutomationStatus | null>(null);
   const [isLocked, setIsLocked] = useState(true);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPollingInventory, setIsPollingInventory] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -207,8 +321,12 @@ export function Admin() {
     }
 
     try {
-      const response = await fetchAdminDashboard(trimmedPassword);
+      const [response, automationResponse] = await Promise.all([
+        fetchAdminDashboard(trimmedPassword),
+        fetchAutomationStatus(trimmedPassword),
+      ]);
       setDashboard(response.data as AdminDashboard);
+      setAutomationStatus(automationResponse.data as AutomationStatus);
       setActivePassword(trimmedPassword);
       setIsLocked(false);
       setAuthError(null);
@@ -219,6 +337,7 @@ export function Admin() {
 
       if (mode === "unlock") {
         setDashboard(null);
+        setAutomationStatus(null);
         setAuthError(message);
       } else {
         setPageError(message);
@@ -237,11 +356,30 @@ export function Admin() {
     await loadDashboard(password, "unlock");
   };
 
+
+  const handlePollInventory = async () => {
+    if (!activePassword) return;
+
+    setIsPollingInventory(true);
+    setPageError(null);
+
+    try {
+      await triggerInventoryPoll(activePassword);
+      const response = await fetchAutomationStatus(activePassword);
+      setAutomationStatus(response.data as AutomationStatus);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to poll inventory right now.";
+      setPageError(message);
+    } finally {
+      setIsPollingInventory(false);
+    }
+  };
   const handleLock = () => {
     setIsLocked(true);
     setPassword("");
     setActivePassword("");
     setDashboard(null);
+    setAutomationStatus(null);
     setAuthError(null);
     setPageError(null);
   };
@@ -352,6 +490,12 @@ export function Admin() {
           </section>
         ) : (
           <div className="space-y-10">
+            <AutomationPanel
+              status={automationStatus}
+              onPollInventory={() => void handlePollInventory()}
+              isPolling={isPollingInventory}
+            />
+
             <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {summaryCards.map((card) => (
                 <MetricCard key={card.label} icon={card.icon} label={card.label} value={card.value} note={card.note} />
@@ -644,3 +788,7 @@ export function Admin() {
     </div>
   );
 }
+
+
+
+

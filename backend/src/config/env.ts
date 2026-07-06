@@ -55,13 +55,23 @@ const envSchema = z.object({
   END_OF_DAY: z.string().optional().default('23:59'),
   TIME_FORMAT: z.string().optional().default('HH:mm'),
   
-  // Communication (SMTP)
+  // Communication (SMTP / Resend / SendGrid)
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  SENDGRID_API_KEY: z.string().optional(),
 
   // Admin and automation
   ADMIN_KEY: z.string().optional().default('kosmicalign_admin_mock'),
   CRON_SECRET: z.string().optional(),
+  ORDER_WEBHOOK_URL: z.string().optional(),
+  OLLAMA_BASE_URL: z.string().optional().default('http://localhost:11434'),
+  OLLAMA_MODEL: z.string().optional().default('llama3.1'),
+  INVENTORY_POLL_CRON: z.string().optional().default('*/30 * * * *'),
+  INVENTORY_POLL_CRON_DISABLED: z.string().optional().default('false'),
+  ADMIN_ALERT_EMAIL: z.string().optional(),
+  ADMIN_ALERT_WEBHOOK_URL: z.string().optional(),
 });
 
 const _env = envSchema.safeParse(process.env);
@@ -72,3 +82,6 @@ if (!_env.success) {
 }
 
 export const env = _env.data;
+
+
+

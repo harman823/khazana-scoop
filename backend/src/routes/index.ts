@@ -9,6 +9,7 @@ import webinarRoutes from './webinar.routes';
 import analyticsRoutes from './analytics.routes';
 import calendarRoutes from './calendar.routes';
 import chatRoutes from './chat.routes';
+import automationRoutes from './automation.routes';
 
 const router = Router();
 
@@ -22,5 +23,7 @@ router.use('/webinars', webinarRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/calendar', calendarRoutes);
 router.use('/chat', chatRoutes);
+router.use('/automations', automationRoutes);
 
 export default router;
+
