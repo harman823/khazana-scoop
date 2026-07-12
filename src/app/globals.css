@@ -28,7 +28,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-poppins: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-baloo: var(--font-baloo), ui-sans-serif, system-ui, sans-serif;
+  --font-barlow: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 
@@ -48,13 +51,9 @@ html.smooth-scroll-active {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 10% 12%, rgba(251, 191, 36, 0.22), transparent 18rem),
-    radial-gradient(circle at 92% 8%, rgba(0, 184, 173, 0.16), transparent 22rem),
-    radial-gradient(circle at 0% 52%, rgba(247, 44, 123, 0.14), transparent 26rem),
-    linear-gradient(180deg, var(--background) 0%, #ffffff 44%, #fff8fb 100%);
+  background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   scroll-behavior: smooth;
 }
 
@@ -2318,4 +2317,239 @@ textarea {
   .orders-status-alert svg {
     display: none;
   }
+}
+
+:root {
+  --background: #fffaf4;
+  --foreground: #33514a;
+  --surface: #ffffff;
+  --surface-soft: #fffdf9;
+  --border: #ebe3da;
+  --muted: #6c817b;
+  --strawberry: #ef8fb3;
+  --strawberry-dark: #e16b98;
+  --teal: #18a59e;
+  --teal-dark: #0a807b;
+  --pop-shadow: 0 16px 36px rgba(118, 140, 134, 0.14);
+  --pop-shadow-lg: 0 28px 64px rgba(118, 140, 134, 0.16);
+  --font-body-sans: "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-display: "Arial Rounded MT Bold", "Trebuchet MS", "Avenir Next", sans-serif;
+}
+
+@theme inline {
+  --font-sans: "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+html {
+  scroll-padding-top: 64px;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(250, 201, 218, 0.18), transparent 20rem),
+    radial-gradient(circle at top right, rgba(185, 238, 233, 0.22), transparent 18rem),
+    linear-gradient(180deg, #fffaf4 0%, #fffdf9 44%, #fff8ef 100%);
+  color: var(--foreground);
+  font-family: var(--font-body-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body::before {
+  display: none;
+}
+
+.shell {
+  width: min(1280px, calc(100% - 48px));
+}
+
+@media (max-width: 760px) {
+  .shell {
+    width: min(100% - 24px, 1280px);
+  }
+}
+
+.app-card {
+  border: 1px solid #ece3d9;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 28px;
+  box-shadow: 0 20px 48px rgba(118, 140, 134, 0.12);
+}
+
+.button-primary,
+.button-secondary,
+.button-quiet {
+  min-height: 52px;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease, color 220ms ease;
+}
+
+.button-primary {
+  border: 1px solid #18a59e;
+  background: #5ac7c1;
+  color: #ffffff;
+  box-shadow: 0 14px 34px rgba(72, 167, 161, 0.22);
+}
+
+.button-secondary {
+  border: 1px solid #c9e7e1;
+  background: #ffffff;
+  color: #2f5a53;
+  box-shadow: 0 14px 34px rgba(118, 140, 134, 0.12);
+}
+
+.button-quiet {
+  color: #31514b;
+}
+
+.button-primary:hover,
+.button-secondary:hover,
+.button-quiet:hover {
+  transform: translateY(-1px);
+}
+
+.button-primary:hover {
+  box-shadow: 0 18px 38px rgba(72, 167, 161, 0.28);
+}
+
+.button-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 10px 24px rgba(72, 167, 161, 0.24);
+}
+
+.button-secondary:hover {
+  background: #f4fbfa;
+  box-shadow: 0 16px 36px rgba(118, 140, 134, 0.16);
+}
+
+.button-quiet:hover {
+  background: #f5fbfa;
+  color: #18a59e;
+}
+
+.text-muted {
+  color: #6c817b;
+}
+
+.focus-ring:focus-visible {
+  outline: 3px solid rgba(24, 165, 158, 0.22);
+  outline-offset: 3px;
+}
+
+.storefront-icon-button {
+  display: inline-flex;
+  height: 46px;
+  width: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d6ebe6;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #35524d;
+  box-shadow: 0 12px 28px rgba(118, 140, 134, 0.12);
+  transition: transform 220ms ease, box-shadow 220ms ease, color 220ms ease, background 220ms ease;
+}
+
+.storefront-icon-button:hover {
+  transform: translateY(-1px);
+  background: #f4fbfa;
+  color: #18a59e;
+  box-shadow: 0 16px 34px rgba(118, 140, 134, 0.16);
+}
+
+.storefront-mini-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #d4ebe4;
+  border-radius: 9999px;
+  background: #f7fffd;
+  color: #24817b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.storefront-input {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid #d7e7e3;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 0 16px;
+  color: #35534d;
+  font-size: 0.98rem;
+  box-shadow: 0 10px 24px rgba(118, 140, 134, 0.08);
+}
+
+.storefront-input::placeholder {
+  color: #8fa09b;
+}
+
+.storefront-panel {
+  border: 1px solid #ece3d9;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 58px rgba(118, 140, 134, 0.12);
+  overflow: hidden;
+}
+
+.storefront-subtle-panel {
+  border: 1px solid #ece3d9;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #fff9ef 0%, #f4fbfa 100%);
+  box-shadow: 0 20px 48px rgba(118, 140, 134, 0.12);
+}
+
+.storefront-stat-card {
+  border: 1px solid #ece3d9;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #ffffff 0%, #fffcf7 100%);
+  padding: 1.5rem;
+  box-shadow: 0 20px 48px rgba(118, 140, 134, 0.1);
+}
+
+.storefront-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.storefront-data-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.storefront-data-table thead th {
+  padding: 1rem 1.25rem;
+  background: #fff8f0;
+  color: #728680;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.storefront-data-table tbody td {
+  padding: 1rem 1.25rem;
+  color: #36534d;
+  border-top: 1px solid #f2ebe2;
+  vertical-align: top;
 }

@@ -1,4 +1,5 @@
-import { getPrisma } from "@/lib/clients";
+import { addOns, currentUser, demoOrders, inventoryItems, scoopTiers } from "@/lib/data";
+import { getPrisma, hasDatabaseUrl } from "@/lib/clients";
 import { requireDatabase } from "@/lib/production-store";
 
 export type AdminTableKey =
@@ -33,7 +34,7 @@ export type AdminTableConfig = {
 export type AdminTableSnapshot = AdminTableConfig & {
   count: number;
   rows: Record<string, unknown>[];
-  source: "supabase";
+  source: "demo" | "supabase";
 };
 
 type CountRow = {
@@ -174,6 +175,15 @@ export function getAdminTableConfig(key: string | undefined): AdminTableConfig {
 
 export async function getAdminTableSnapshot(key: AdminTableKey): Promise<AdminTableSnapshot> {
   const config = getAdminTableConfig(key);
+  if (!hasDatabaseUrl()) {
+    const rows = getDemoTableRows(key);
+    return {
+      ...config,
+      count: rows.length,
+      rows,
+      source: "demo",
+    };
+  }
   requireDatabase();
   const [count, rows] = await Promise.all([getTableCount(key), getTableRows(key)]);
   return {
@@ -182,6 +192,92 @@ export async function getAdminTableSnapshot(key: AdminTableKey): Promise<AdminTa
     rows,
     source: "supabase",
   };
+}
+
+function getDemoTableRows(key: AdminTableKey): Record<string, unknown>[] {
+  switch (key) {
+    case "orders":
+      return demoOrders.map((order) => ({
+        id: order.id,
+        status: order.status,
+        totalCents: order.totalCents,
+        createdAt: order.createdAt,
+      }));
+    case "inventory":
+      return inventoryItems.map((item) => ({
+        itemName: item.itemName,
+        category: item.category,
+        totalWeightGrams: item.onHandGrams,
+        reservedGrams: item.reservedGrams,
+        lowStockThreshold: item.lowStockThreshold,
+      }));
+    case "users":
+      return [
+        {
+          name: currentUser.name,
+          email: currentUser.email,
+          role: "USER",
+          scoopPoints: currentUser.scoopPoints,
+        },
+      ];
+    case "tiers":
+      return scoopTiers.map((tier) => ({
+        name: tier.name,
+        priceCents: tier.priceCents,
+        baseVolumeMl: tier.volumeMl,
+        active: true,
+      }));
+    case "addons":
+      return addOns.map((addOn) => ({
+        name: addOn.name,
+        type: addOn.id,
+        priceCents: addOn.priceCents,
+        active: true,
+      }));
+    case "orderItems":
+      return demoOrders.map((order) => ({
+        orderId: order.id,
+        tierId: order.tierName,
+        addOnId: order.reScoopLimit > 0 ? "re-scoop" : "lucky-capsule",
+        quantity: order.itemCount,
+      }));
+    case "payments":
+      return demoOrders.map((order) => ({
+        orderId: order.id,
+        provider: "stripe",
+        status: order.status === "Pending" ? "created" : "paid",
+        amountCents: order.totalCents,
+      }));
+    case "shipping":
+      return demoOrders.map((order, index) => ({
+        orderId: order.id,
+        recipientName: currentUser.name,
+        postalCode: `1000${index}`,
+        trackingNumber: order.status === "Shipped" || order.status === "Delivered" ? `MS-TRACK-${index + 1}` : "—",
+      }));
+    case "reviews":
+      return [];
+    case "points":
+      return [
+        {
+          userId: currentUser.id,
+          orderId: demoOrders[0]?.id ?? null,
+          points: currentUser.scoopPoints,
+          reason: "Demo loyalty balance",
+        },
+      ];
+    case "storage":
+      return [
+        {
+          kind: "PRODUCT_IMAGE",
+          bucket: "product-media",
+          path: "mystery-scoop-hero.png",
+          createdAt: demoOrders[0]?.createdAt ?? currentUser.memberSince,
+        },
+      ];
+    default:
+      return [];
+  }
 }
 
 async function getTableCount(key: AdminTableKey): Promise<number> {

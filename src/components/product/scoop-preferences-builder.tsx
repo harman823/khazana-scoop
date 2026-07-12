@@ -96,7 +96,7 @@ export function ScoopPreferencesBuilder(): React.ReactElement {
 
   return (
     <section className="mt-10">
-      <h2 className="text-4xl font-black tracking-normal">1. Build your scoop preferences</h2>
+      <h2 className="text-4xl font-baloo font-bold tracking-tight text-[#1e293b]">1. Build your scoop preferences</h2>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         {scoopSizes.map((size) => {
@@ -105,31 +105,31 @@ export function ScoopPreferencesBuilder(): React.ReactElement {
             <button
               aria-pressed={selected}
               className={`rounded-[7px] border bg-white p-4 text-left transition ${
-                selected ? "border-[#f72c7b] shadow-[0_16px_38px_rgba(247,44,123,0.12)]" : "border-[#d8e3df]"
+                selected ? "border-[#C5B3D3] shadow-[0_16px_38px_rgba(197,179,211,0.3)]" : "border-[#FFE2E2]"
               }`}
               key={size.id}
               onClick={() => changeSize(size)}
               type="button"
             >
-              <span className="block text-base font-black">{size.label}</span>
+              <span className="block text-lg font-baloo font-bold text-[#1e293b]">{size.label}</span>
               <span className="mt-1 block text-sm leading-5 text-muted">
                 {size.basicLimit} basic items + {size.premiumLimit} premium items
               </span>
-              <span className="mt-2 block text-lg font-black text-[#2d4a45]">{size.priceLabel}</span>
+              <span className="mt-2 block text-lg font-black font-baloo text-[#C5B3D3]">{size.priceLabel}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="app-card mt-5 overflow-hidden bg-[#f8fffd] p-5">
-        <div className="rounded-[7px] border border-[#d8e3df] bg-white p-4">
+      <div className="app-card mt-5 overflow-hidden bg-[#FBEFEF] p-5">
+        <div className="rounded-[7px] border border-[#FFE2E2] bg-white p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-base font-black text-[#003b37]">{selectedSize.label}</h3>
-            <div className="flex flex-wrap gap-3 text-sm font-black text-[#006a63]">
-              <span className="rounded-full bg-[rgba(0,184,173,0.13)] px-4 py-2">
+            <h3 className="text-base font-black font-baloo text-[#1e293b]">{selectedSize.label}</h3>
+            <div className="flex flex-wrap gap-3 text-sm font-black text-[#C5B3D3]">
+              <span className="rounded-full bg-white px-4 py-2">
                 {basicTotal}/{selectedSize.basicLimit} basic items
               </span>
-              <span className="rounded-full bg-[rgba(0,184,173,0.13)] px-4 py-2">
+              <span className="rounded-full bg-white px-4 py-2">
                 {premiumSelections.length}/{selectedSize.premiumLimit} premium items
               </span>
             </div>
@@ -138,13 +138,13 @@ export function ScoopPreferencesBuilder(): React.ReactElement {
 
         <div className="mt-5 grid gap-8 lg:grid-cols-[1fr_1.05fr]">
           <div>
-            <h3 className="text-base font-black text-[#003b37]">Basic items</h3>
+            <h3 className="text-base font-black font-baloo text-[#1e293b]">Basic items</h3>
             <p className="text-sm text-muted">Choose up to {selectedSize.basicLimit} (Max 3 per item)</p>
             <div className="mt-4 max-h-[280px] overflow-y-auto pr-3">
               {basicItems.map((item) => (
                 <div className="grid grid-cols-[1fr_110px] items-center gap-4 py-2" key={item}>
-                  <span className="text-sm font-black text-[#003b37]">{item}</span>
-                  <div className="grid h-12 grid-cols-3 items-center rounded-[7px] border border-[#d8e3df] bg-white text-sm font-black">
+                  <span className="text-sm font-black font-baloo text-[#1e293b]">{item}</span>
+                  <div className="grid h-12 grid-cols-3 items-center rounded-[7px] border border-[#FFE2E2] bg-white text-sm font-black">
                     <button aria-label={`Decrease ${item}`} className="h-full" onClick={() => adjustBasicItem(item, -1)} type="button">
                       -
                     </button>
@@ -159,21 +159,21 @@ export function ScoopPreferencesBuilder(): React.ReactElement {
           </div>
 
           <div>
-            <h3 className="text-base font-black text-[#003b37]">Premium items</h3>
+            <h3 className="text-base font-black font-baloo text-[#1e293b]">Premium items</h3>
             <p className="text-sm text-muted">Choose up to {selectedSize.premiumLimit}</p>
             <div className="mt-4 grid gap-3">
               {premiumItems.map((item) => {
                 const selected = premiumSelections.includes(item);
                 return (
                   <button
-                    className="flex items-center gap-3 text-left text-sm font-black text-[#385552]"
+                    className="flex items-center gap-3 text-left font-poppins text-[#1e293b]/80 font-bold"
                     key={item}
                     onClick={() => togglePremiumItem(item)}
                     type="button"
                   >
                     <span
                       className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
-                        selected ? "border-[#00b8ad] bg-[#00b8ad] text-white" : "border-[#9cafaa]"
+                        selected ? "border-[#C5B3D3] bg-[#C5B3D3] text-white" : "border-[#FFE2E2]"
                       }`}
                     >
                       {selected ? <Check size={13} /> : null}
@@ -187,10 +187,10 @@ export function ScoopPreferencesBuilder(): React.ReactElement {
         </div>
       </div>
 
-      <label className="mt-5 flex min-h-12 items-center gap-3 rounded-[7px] border border-[#d8e3df] bg-white px-4 text-sm font-black">
+      <label className="mt-5 flex min-h-12 items-center gap-3 rounded-[7px] border border-[#FFE2E2] bg-white px-4 text-sm font-black">
         <input
           checked={instagramVideo}
-          className="h-5 w-5 accent-[#00b8ad]"
+          className="h-5 w-5 accent-[#C5B3D3]"
           onChange={(event) => setInstagramVideo(event.target.checked)}
           type="checkbox"
         />
