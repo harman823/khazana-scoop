@@ -17,7 +17,8 @@ export const dynamic = "force-dynamic";
 export default async function ProductPage({ params }: ProductPageProps): Promise<React.ReactElement> {
   const { slug } = await params;
   const product = await getStorefrontCatalogProductBySlug(slug);
-  const canOrderCatalogProduct = product?.id && product.id > 0 && product.effectivePrice !== null;
+  const canOrderCatalogProduct =
+    product?.id && product.id > 0 && product.effectivePrice !== null && product.stockQuantity > 0;
 
   if (!product) {
     notFound();
@@ -47,13 +48,20 @@ export default async function ProductPage({ params }: ProductPageProps): Promise
                 {product.originalPriceLabel ? (
                   <p className="text-sm text-[#8b9b97] line-through">{product.originalPriceLabel}</p>
                 ) : null}
+                <p className="mt-2 text-sm font-semibold text-[#627771]">
+                  {product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : 'Currently out of stock'}
+                </p>
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 {canOrderCatalogProduct ? (
                   <Link className="button-primary focus-ring" href={`${product.route}/buy`}>
                     Order this item <ShoppingCart size={17} />
                   </Link>
-                ) : null}
+                ) : (
+                  <span className="inline-flex items-center justify-center rounded-full border border-[#e8d9cf] bg-[#fff7f1] px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#9b6d54]">
+                    Out of stock
+                  </span>
+                )}
                 <Link className="button-secondary focus-ring" href="/mystery-scoops">
                   Build a mystery scoop <Sparkles size={17} />
                 </Link>

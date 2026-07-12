@@ -1,9 +1,10 @@
-import { featuredProducts, getProductBySlug } from "@/lib/products";
+import { getProductBySlug } from "@/lib/products";
 import type {
   CatalogCategory,
   CatalogCollection,
   CatalogDiscount,
   CatalogImage,
+  StorefrontCatalogCollectionSection,
   StorefrontCatalogFacet,
   StorefrontCatalogHomeData,
   StorefrontCatalogProduct,
@@ -12,11 +13,14 @@ import type {
 type ProductRow = {
   id: number | string;
   name: string;
+  view_name: string | null;
   slug: string | null;
   description: string | null;
   base_price: number | string | null;
+  selling_price: number | string | null;
   primary_image_url: string | null;
   available_colours: string[] | null;
+  stock_quantity: number | string | null;
   active: boolean | null;
   category: string | null;
   category_id: number | string | null;
@@ -30,6 +34,14 @@ type CategoryRow = {
 };
 
 type CollectionRow = {
+  id: number | string;
+  name: string;
+  slug: string;
+  description: string | null;
+  active?: boolean | null;
+};
+
+type LegacyCollectionRow = {
   id: number | string;
   name: string;
   slug: string;
@@ -119,33 +131,14 @@ function mapFallbackProduct(slug: string): StorefrontCatalogProduct | null {
     priceLabel: product.priceLabel,
     originalPriceLabel: null,
     activeDiscount: null,
+    stockQuantity: 0,
     route: product.route,
   };
 }
 
 function mapFallbackProducts(): StorefrontCatalogProduct[] {
-  return featuredProducts
-    .filter((product) => product.slug !== "mystery-scoops")
-    .map((product) => ({
-      id: 0,
-      slug: product.slug,
-      name: product.name,
-      eyebrow: product.eyebrow,
-      summary: product.summary,
-      description: product.description,
-      image: product.image,
-      gallery: [],
-      category: null,
-      collections: [],
-      availableColours: [],
-      highlights: product.highlights,
-      basePrice: null,
-      effectivePrice: null,
-      priceLabel: product.priceLabel,
-      originalPriceLabel: null,
-      activeDiscount: null,
-      route: product.route,
-    }));
+  // Fallback when Supabase config is missing – return an empty list.
+  return [];
 }
 
 async function fetchTable<T>(table: string, query: Record<string, string>): Promise<T[]> {
@@ -166,10 +159,35 @@ async function fetchTable<T>(table: string, query: Record<string, string>): Prom
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to load ${table}: ${response.status}`);
+    const message = await response.text();
+    throw new Error(`Failed to load ${table}: ${response.status} ${message}`.trim());
   }
 
   return (await response.json()) as T[];
+}
+
+async function fetchCollectionRows(): Promise<CollectionRow[]> {
+  try {
+    return await fetchTable<CollectionRow>("collections", {
+      select: "id,name,slug,description,active",
+      active: "eq.true",
+      order: "sort_order.asc,name.asc,id.asc",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (!message.includes("description")) {
+      throw error;
+    }
+
+    const legacyRows = await fetchTable<LegacyCollectionRow>("collections", {
+      select: "id,name,slug,active",
+      active: "eq.true",
+      order: "sort_order.asc,name.asc,id.asc",
+    });
+
+    return legacyRows.map((row) => ({ ...row, description: null }));
+  }
 }
 
 function mapCategory(row: CategoryRow): CatalogCategory {
@@ -185,6 +203,7 @@ function mapCollection(row: CollectionRow): CatalogCollection {
     id: Number(row.id),
     name: row.name,
     slug: row.slug,
+    description: row.description,
   };
 }
 
@@ -340,6 +359,43 @@ function buildFacetMap(
   });
 }
 
+function buildCollectionFacets(
+  collections: CatalogCollection[],
+  products: StorefrontCatalogProduct[],
+): StorefrontCatalogFacet[] {
+  return collections
+    .map((collection) => {
+      const matchingProducts = products.filter((product) =>
+        product.collections.some((item) => item.id === collection.id),
+      );
+
+      return {
+        id: collection.id,
+        name: collection.name,
+        slug: collection.slug,
+        image: matchingProducts[0]?.image || "/mystery-scoop-hero.png",
+        href: `/products?collection=${encodeURIComponent(collection.slug)}`,
+        productCount: matchingProducts.length,
+        description: collection.description,
+      } satisfies StorefrontCatalogFacet;
+    })
+    .filter((collection) => collection.productCount > 0);
+}
+
+function buildCollectionSections(
+  collections: StorefrontCatalogFacet[],
+  products: StorefrontCatalogProduct[],
+): StorefrontCatalogCollectionSection[] {
+  return collections
+    .map((collection) => ({
+      collection,
+      products: products.filter((product) =>
+        product.collections.some((item) => item.slug === collection.slug),
+      ),
+    }))
+    .filter((section) => section.products.length > 0);
+}
+
 export async function getStorefrontCatalogProducts(): Promise<StorefrontCatalogProduct[]> {
   if (!hasCatalogConfig()) {
     return mapFallbackProducts();
@@ -348,7 +404,8 @@ export async function getStorefrontCatalogProducts(): Promise<StorefrontCatalogP
   try {
     const [products, categories, collections, links, images, discounts] = await Promise.all([
       fetchTable<ProductRow>("products", {
-        select: "id,name,slug,description,base_price,primary_image_url,available_colours,active,category,category_id",
+        select:
+          "id,name,view_name,slug,description,base_price,selling_price,primary_image_url,available_colours,stock_quantity,active,category_id",
         active: "eq.true",
         order: "sort_order.asc,name.asc,id.asc",
       }),
@@ -357,11 +414,7 @@ export async function getStorefrontCatalogProducts(): Promise<StorefrontCatalogP
         active: "eq.true",
         order: "sort_order.asc,name.asc,id.asc",
       }),
-      fetchTable<CollectionRow>("collections", {
-        select: "id,name,slug,active",
-        active: "eq.true",
-        order: "sort_order.asc,name.asc,id.asc",
-      }),
+      fetchCollectionRows(),
       fetchTable<ProductCollectionRow>("product_collections", {
         select: "product_id,collection_id",
       }),
@@ -409,18 +462,19 @@ export async function getStorefrontCatalogProducts(): Promise<StorefrontCatalogP
         const category = categoryId === null ? null : categoryMap.get(categoryId) ?? null;
         const productCollections = collectionsByProductId.get(productId) ?? [];
         const gallery = imagesByProductId.get(productId) ?? [];
-        const basePrice = row.base_price === null ? null : toNumber(row.base_price);
+        const basePriceSource = row.selling_price ?? row.base_price;
+        const basePrice = basePriceSource === null ? null : toNumber(basePriceSource);
         const bestDiscount = basePrice === null ? null : pickBestDiscount(productId, categoryId, productCollections, mappedDiscounts, basePrice);
         const effectivePrice = basePrice === null ? null : applyDiscount(basePrice, bestDiscount);
         const image = row.primary_image_url || gallery[0]?.url || "/mystery-scoop-hero.png";
-        const description = row.description?.trim() || `${row.name} is part of the live catalog and ready to be merchandised from the dashboard.`;
+        const description = row.description?.trim() || "";
         const colours = Array.isArray(row.available_colours) ? row.available_colours.filter(Boolean) : [];
         return {
           id: productId,
           slug: row.slug?.trim() || slugify(row.name),
-          name: row.name,
-          eyebrow: category?.name || row.category || "Live catalog",
-          summary: summarizeDescription(description),
+          name: row.view_name?.trim() || row.name,
+          eyebrow: category?.name || productCollections[0]?.name || "Live catalog",
+          summary: description ? summarizeDescription(description) : "",
           description,
           image,
           gallery,
@@ -436,6 +490,7 @@ export async function getStorefrontCatalogProducts(): Promise<StorefrontCatalogP
               ? formatCatalogPrice(basePrice)
               : null,
           activeDiscount: bestDiscount,
+          stockQuantity: Math.max(0, toNumber(row.stock_quantity)),
           route: `/products/${row.slug?.trim() || slugify(row.name)}`,
         } satisfies StorefrontCatalogProduct;
       });
@@ -478,12 +533,25 @@ export function filterStorefrontCatalogProducts(
 export async function getStorefrontCatalogHomeData(): Promise<StorefrontCatalogHomeData> {
   const products = await getStorefrontCatalogProducts();
   const categories = buildFacetMap(products, "category");
-  const collections = buildFacetMap(products, "collection");
+  let collections = buildFacetMap(products, "collection");
+
+  if (hasCatalogConfig()) {
+    try {
+      const collectionRows = await fetchCollectionRows();
+
+      collections = buildCollectionFacets(collectionRows.map(mapCollection), products);
+    } catch {
+      // Fall back to the product-derived collection list when the collection query fails.
+    }
+  }
+
+  const collectionSections = buildCollectionSections(collections, products);
 
   return {
     products,
     categories,
     collections,
+    collectionSections,
     featuredProducts: products.slice(0, 6),
     favouriteProducts: products.slice(0, 4),
   };

@@ -25,7 +25,7 @@ export function CatalogProductOrderClient({
   const [message, setMessage] = useState<string>("");
   const [orderId, setOrderId] = useState<number | null>(null);
 
-  const maxQuantity = 10;
+  const maxQuantity = Math.max(1, Math.min(10, product.stockQuantity));
 
   async function submitOrder(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -147,6 +147,9 @@ export function CatalogProductOrderClient({
               </p>
               <p className="mt-2 text-sm text-[#627771]">
                 A shared dashboard order, item record, and stock movement will be created as soon as you submit.
+              </p>
+              <p className="mt-2 text-sm font-semibold text-[#32524b]">
+                {product.stockQuantity} item{product.stockQuantity === 1 ? '' : 's'} currently available
               </p>
             </div>
           </div>

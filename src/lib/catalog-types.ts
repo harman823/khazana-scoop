@@ -8,6 +8,7 @@ export type CatalogCollection = {
   id: number;
   name: string;
   slug: string;
+  description: string | null;
 };
 
 export type CatalogImage = {
@@ -47,6 +48,7 @@ export type StorefrontCatalogProduct = {
   priceLabel: string;
   originalPriceLabel: string | null;
   activeDiscount: CatalogDiscount | null;
+  stockQuantity: number;
   route: string;
 };
 
@@ -57,12 +59,19 @@ export type StorefrontCatalogFacet = {
   image: string;
   href: string;
   productCount: number;
+  description?: string | null;
+};
+
+export type StorefrontCatalogCollectionSection = {
+  collection: StorefrontCatalogFacet;
+  products: StorefrontCatalogProduct[];
 };
 
 export type StorefrontCatalogHomeData = {
   products: StorefrontCatalogProduct[];
   categories: StorefrontCatalogFacet[];
   collections: StorefrontCatalogFacet[];
+  collectionSections: StorefrontCatalogCollectionSection[];
   featuredProducts: StorefrontCatalogProduct[];
   favouriteProducts: StorefrontCatalogProduct[];
 };

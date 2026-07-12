@@ -67,7 +67,12 @@ export function StorefrontHeader({
         </div>
         
         <nav className="hidden lg:flex flex-1 items-center gap-8 font-baloo text-lg font-medium text-[#1e293b]">
-          {[{label: 'SHOP', href: '/products'}, {label: 'NEW ARRIVALS', href: '/new'}, {label: 'MYSTERY SCOOPS', href: '/mystery-scoops'}, {label: 'ABOUT US', href: '/about'}].map(item => (
+          {[
+            { label: 'HOME', href: '/' },
+            { label: 'PRODUCTS', href: '/products' },
+            { label: 'MYSTERY SCOOPS', href: '/mystery-scoops' },
+            { label: 'ABOUT US', href: '/about' },
+          ].map((item) => (
             <Link key={item.href} href={item.href} className={`transition-colors hover:text-[#C5B3D3] ${currentPath === item.href ? 'text-[#C5B3D3]' : ''}`}>
               {item.label}
             </Link>

@@ -17,7 +17,7 @@ export default async function CatalogProductOrderPage({
   const { slug } = await params;
   const product = await getStorefrontCatalogProductBySlug(slug);
 
-  if (!product || product.id <= 0 || product.effectivePrice === null) {
+  if (!product || product.id <= 0 || product.effectivePrice === null || product.stockQuantity <= 0) {
     notFound();
   }
 
